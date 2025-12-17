@@ -7,10 +7,11 @@ class Game():
         self.running, self.playing = True, False
         self.UP_KEY, self.DOWN_KEY, self.START_KEY, self.BACK_KEY = False, False, False, False
         self.LEFT_KEY, self.RIGHT_KEY = False, False
+        self.ESCAPE_KEY = False
         self.display_w, self.display_h = 480, 270
         self.display = pygame.Surface((self.display_w,self.display_h))
         self.window = pygame.display.set_mode((self.display_w,self.display_h))
-        self.font_name = '8-BIT WONDER.TTF'
+        self.font_name = '.\8-BIT WONDER.TTF'
         # self.font_name = pygame.font.get_default_font()
         self.black, self.white = (0, 0, 0), (255, 255, 255)
         self.main_menu = MainMenu(self)
@@ -19,21 +20,32 @@ class Game():
         self.controls_menu = ControlsMenu(self)
         self.credits = CreditsMenu(self)
         self.current_menu = self.main_menu
+
+        self.paused = False
+        self.pause_menu = PauseMenu(self)
+        self.pause_volume_menu = PauseVolumeMenu(self)
+
+        self.game_over = False
+        self.game_over_menu = GameOverMenu(self)
+
         self.volume = 5
         pygame.mixer.init()
         pygame.mixer.music.set_volume(self.volume/10)
 
-        pygame.mixer.music.load('Music/main_menu_cut.mp3')
+        pygame.mixer.music.load('.\Music\main_menu_cut.mp3')
         pygame.mixer.music.play(-1)
 
-        self.nav_sound = pygame.mixer.Sound('Music/main_menu_nav.wav')
-        self.select_sound = pygame.mixer.Sound('Music/main_menu_select_cut.wav')
-        self.goback_sound = pygame.mixer.Sound('Music/main_menu_goback_cut.wav')
+        self.nav_sound = pygame.mixer.Sound('.\Music\main_menu_nav.wav')
+        self.select_sound = pygame.mixer.Sound('.\Music\main_menu_select_cut.wav')
+        self.goback_sound = pygame.mixer.Sound('.\Music\main_menu_goback_cut.wav')
         self.update_sound_volume()
 
     def game_loop(self):
         while self.playing:
             self.check_events()
+            if self.paused:
+                self.current_menu.display_menu()
+                continue
             if self.START_KEY:
                 self.playing = False
             self.display.fill(self.black)
@@ -41,6 +53,11 @@ class Game():
             self.window.blit(self.display, (0,0))
             pygame.display.update()
             self.reset_keys()
+
+    def player_died(self):
+        self.game_over = True
+        self.playing = False
+        self.current_menu = self.game_over_menu
 
     def check_events(self):
         for event in pygame.event.get():
@@ -60,9 +77,14 @@ class Game():
                     self.LEFT_KEY = True
                 if event.key == pygame.K_RIGHT:
                     self.RIGHT_KEY = True
+                if event.key == pygame.K_ESCAPE:
+                    if self.playing:
+                        self.paused = True
+                        self.current_menu = self.pause_menu
     def reset_keys(self):
         self.UP_KEY, self.DOWN_KEY, self.START_KEY, self.BACK_KEY = False, False, False, False
         self.LEFT_KEY, self.RIGHT_KEY = False, False
+        self.ESCAPE_KEY = False
 
     def draw_text(self, text, size, x, y):
         font = pygame.font.Font(self.font_name,size)
