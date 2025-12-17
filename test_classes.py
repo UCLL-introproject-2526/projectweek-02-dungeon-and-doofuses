@@ -1,5 +1,7 @@
 import pygame
 from math import hypot
+from test_inventory import InventoryView, Inventory
+
 
 class enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed):
@@ -36,6 +38,7 @@ class player(pygame.sprite.Sprite):
         self.image.fill((255,0,0))
         self.rect = self.image.get_rect()
         self.rect.center = (400,200)
+
 
     def update(self):
         pass

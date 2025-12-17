@@ -9,6 +9,7 @@ import pygame
 import random
 import math
 import heapq
+from test_inventory import inventory, Inventory, InventoryView, Entity
 
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1200, 800    # window size
@@ -125,6 +126,8 @@ class Player(pygame.sprite.Sprite):
         self.hp = max_hp
         self.cooldown_timer = 0
         self.COOLDOWN = cooldown
+        self.components = []
+        self.inventory_window = Entity(InventoryView(inventory))
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
