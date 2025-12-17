@@ -1,5 +1,5 @@
 import pygame
-from game import Player, screen
+from game import Player, TILE, screen
 
 class KeyItem(pygame.sprite.Sprite):
     def __init__(self, x, y, key_id, size=12, color=(255, 215, 0)):

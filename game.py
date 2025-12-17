@@ -9,17 +9,17 @@ import pygame
 import random
 import math
 import heapq
-from test_inventory import inventory, Inventory, InventoryView, Entity
+
 
 # ---------------------- CONFIG ----------------------
-SCREEN_W, SCREEN_H = 1200, 800    # window size
+SCREEN_W, SCREEN_H = 1000, 600    # window size
 TILE = 32                        # tile size for pathfinding grid
 FPS = 60
 
 # Asset paths (relative to this script)
 ASSETS_DIR = Path('Merged/Assets')
-HERO_IMG = ASSETS_DIR / 'Hero_basic_24x24.png'  # use your actual filename
-MAP_IMG  = ASSETS_DIR / 'map.png'          # pre-generated map image
+HERO_IMG = ASSETS_DIR / '.\Assets\Hero_basic_24x24.png'  # use your actual filename
+MAP_IMG  = ASSETS_DIR / '.\Assets\map.png'          # pre-generated map image
 
 # ---------------------- CAMERA ----------------------
 class Camera:
@@ -115,7 +115,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, speed=2, max_hp=10, cooldown=4):
         super().__init__()
         # Load hero sprite (Path -> str)
-        self.image = pygame.image.load(str(HERO_IMG)).convert_alpha()
+        self.image = pygame.image.load(str('.\Assets\Hero_basic_24x24.png')).convert_alpha()
         # scale pixel art (x2)
         self.image = pygame.transform.scale_by(self.image, 2)
         self.rect = self.image.get_rect(topleft=(x, y))
@@ -127,7 +127,7 @@ class Player(pygame.sprite.Sprite):
         self.cooldown_timer = 0
         self.COOLDOWN = cooldown
         self.components = []
-        self.inventory_window = Entity(InventoryView(inventory))
+
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
@@ -304,7 +304,7 @@ def main():
     clock = pygame.time.Clock()
 
     # Load map image (Path -> str)
-    map_surface = pygame.image.load(str(MAP_IMG)).convert()
+    map_surface = pygame.image.load(str('.\Assets\map.png')).convert()
     # scale pixel art (x2)
     map_surface = pygame.transform.scale_by(map_surface, 2)
 
