@@ -46,6 +46,7 @@ class Camera:
         for sprite in sorted(group.sprites(), key=lambda s: s.rect.centery):
             surface.blit(sprite.image, (sprite.rect.x - self.offset.x,
                                         sprite.rect.y - self.offset.y))
+    
 
 # ---------------------- UTILITIES -------------------
 def get_mouse_sword_hitbox(player_rect, dir_x, dir_y, angle_offset=0):
@@ -65,6 +66,9 @@ def rect_collides_walls(rect, walls_group):
         if rect.colliderect(w.rect):
             return True
     return False
+
+def screen_to_world(camera,pos): return camera.to_world(pos)
+def world_to_tile(pos,TILE): return pos[0] // TILE, pos[1] // TILE
 
 # ---------------------- A* PATHFINDING ---------------
 def astar(start, goal, blocked, grid_w, grid_h):
@@ -112,10 +116,10 @@ def astar(start, goal, blocked, grid_w, grid_h):
 
 # ---------------------- SPRITES ----------------------
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed=2, max_hp=10, cooldown=4):
+    def __init__(self, x, y, speed=5, max_hp=10, cooldown=4):
         super().__init__()
         # Load hero sprite (Path -> str)
-        self.image = pygame.image.load(str('.\Assets\Hero_basic_24x24.png')).convert_alpha()
+        self.image = pygame.image.load(str('.\projectweek-02-dungeon-and-doofuses\Assets\Hero_basic_24x24.png')).convert_alpha()
         # scale pixel art (x2)
         self.image = pygame.transform.scale_by(self.image, 2)
         self.rect = self.image.get_rect(topleft=(x, y))
@@ -266,6 +270,34 @@ class Wall(pygame.sprite.Sprite):
         self.image = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
         self.image.fill((250, 0, 250, 80))
 
+class room (pygame.sprite.Sprite):
+    def __init__(self, x, y, w, h, doors):
+        super().__init__()
+        # self.rect = pygame.rect(x, y ,w ,h)
+        self.image = self.image = pygame.Surface([w, h])
+        self.image.fill((250,0,0))
+        self.rect= self.image.get_rect(topleft=(x,y))
+        self.counter = 0
+        self.doors = doors
+        # to do: connect to a list of doors (specifict list per room)
+
+        def monsterCount(self, count):
+            if count == 0:
+                self.unlock() 
+
+        def close(self):
+            for d in self.doors:
+                d.open= False
+
+        def unlock():
+            for d in self.doors:
+                d.open= True
+        # make it so the doors unlock (adjust state door object)
+            
+class Door(Wall):
+    def __init__(self, rect):
+        super().__init__(rect)
+        self.open = True
 # ---------------------- MAP LOADING -----------------
 
 def build_world_from_map(map_surface, TILE=32, alpha_threshold=8):
@@ -306,7 +338,7 @@ def main():
     clock = pygame.time.Clock()
 
     # Load map image (Path -> str)
-    map_surface = pygame.image.load(str('.\Assets\map.png')).convert()
+    map_surface = pygame.image.load(str('.\projectweek-02-dungeon-and-doofuses\Assets\map.png')).convert()
     # scale pixel art (x2)
     map_surface = pygame.transform.scale_by(map_surface, 2)
 
@@ -338,6 +370,9 @@ def main():
 
     # Enemies: spawn on random free tiles
     enemies = pygame.sprite.Group()
+    rooms = pygame.sprite.Group()
+    doors =[]
+    rooms.add(room(477,671,880,880,doors))
     attempts = 0
     while len(enemies) < 10 and attempts < 1000:
         attempts += 1
@@ -446,6 +481,7 @@ def main():
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y - camera.offset.y))
         camera.blit_group(screen, enemies)
         camera.blit_group(screen, player_group)
+        camera.blit_group(screen,rooms)
 
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
@@ -469,6 +505,14 @@ def main():
             pygame.draw.rect(screen, (200, 50, 50), (bar_x, bar_y, int(bar_w * (1 - frac)), bar_h))
         else:
             pygame.draw.rect(screen, (50, 200, 50), (bar_x, bar_y, bar_w, bar_h))
+
+            mx,my = pygame.mouse.get_pos()
+            wx,wy = camera.to_world((mx,my))
+            tx,ty = wx //TILE, wy //TILE
+
+            font = pygame.font.SysFont(None,18)
+            text = font.render(f"screen:{mx},{my} world:{wx},{wy} tile: {tx},{ty}",True,(255,255,0))
+            screen.blit(text,(10,10))
 
         pygame.display.flip()
 
