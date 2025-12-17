@@ -150,6 +150,8 @@ class Player(pygame.sprite.Sprite):
             self.y -= dy
             self.rect.topleft = (int(self.x), int(self.y))
 
+    
+
     def update(self, walls, world_rect):
         if self.cooldown_timer > 0:
             self.cooldown_timer -= 1
