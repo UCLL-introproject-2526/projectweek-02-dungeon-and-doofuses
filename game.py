@@ -13,7 +13,7 @@ from test_inventory import inventory, Inventory, InventoryView, Entity
 
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1200, 800    # window size
-TILE = 46                        # tile size for pathfinding grid
+TILE = 32                        # tile size for pathfinding grid
 FPS = 60
 
 # Asset paths (relative to this script)
@@ -265,9 +265,8 @@ class Wall(pygame.sprite.Sprite):
         self.image.fill((250, 0, 250, 80))
 
 # ---------------------- MAP LOADING -----------------
-# NumPy-free collision grid from a pre-rendered map image
 
-def build_world_from_map(map_surface, TILE=46, threshold=90):
+def build_world_from_map(map_surface, TILE=32, alpha_threshold=8):
     world_w, world_h = map_surface.get_size()
     grid_w = world_w // TILE
     grid_h = world_h // TILE
@@ -284,7 +283,7 @@ def build_world_from_map(map_surface, TILE=46, threshold=90):
                 if sy >= world_h:  sy = world_h - 1
                 r, g, b, *_ = map_surface.get_at((sx, sy))
                 lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-                if lum < threshold:
+                if lum > alpha_threshold:
                     blocked_tiles.add((tx, ty))
     finally:
         map_surface.unlock()
@@ -311,7 +310,7 @@ def main():
 
     # Build world from map without surfarray
     world_w, world_h, grid_w, grid_h, blocked_tiles, walls = build_world_from_map(
-        map_surface, TILE=TILE, threshold=90
+        map_surface, TILE=TILE, alpha_threshold=8
     )
     world_rect = pygame.Rect(0, 0, world_w, world_h)
 
@@ -319,7 +318,7 @@ def main():
     camera = Camera(SCREEN_W, SCREEN_H, world_w, world_h)
 
     # Player start: first free tile near top-left
-    start_tx, start_ty = 0, 0
+    start_tx, start_ty = 70,70
     if (start_tx, start_ty) in blocked_tiles:
         found = False
         for ty in range(grid_h):
@@ -446,8 +445,8 @@ def main():
         camera.blit_group(screen, enemies)
         camera.blit_group(screen, player_group)
 
-        for w in walls:
-            screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
+        # for w in walls:
+        #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
 
 
 
