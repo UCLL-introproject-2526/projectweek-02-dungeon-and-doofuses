@@ -407,12 +407,12 @@ def pause_game(screen, clock, game):
         for event in pygame.event.get():
             if menu_state == 'Volume':
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT and game.volume > 0:
+                    if event.key == pygame.K_s and game.volume > 0:
                         game.nav_sound.play()
                         game.volume -= 1
                         game.update_sound_volume()
 
-                    elif event.key == pygame.K_RIGHT and game.volume < 10:
+                    elif event.key == pygame.K_d and game.volume < 10:
                         game.nav_sound.play()
                         game.volume += 1
                         game.update_sound_volume()
@@ -429,11 +429,11 @@ def pause_game(screen, clock, game):
                 if event.key == pygame.K_ESCAPE:
                     paused = False
 
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_z:
                     state_index = (state_index - 1) % len(options)
                     game.nav_sound.play()
 
-                elif event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_s:
                     state_index = (state_index + 1) % len(options)
                     game.nav_sound.play()
 
