@@ -9,7 +9,7 @@ import pygame
 import random
 import math
 import heapq
-from menu_game import *
+
 import sys
 
 # ---------------------- CONFIG ----------------------
@@ -393,6 +393,7 @@ def pause_game(screen, clock, game):
     pygame.init()
     paused = True
     font = pygame.font.Font('Assets\8-BIT WONDER.TTF', 30)
+    menu_state = 'Main'
 
     options = ['Resume', 'Volume', 'Quit']
     state_index = 0
@@ -404,6 +405,22 @@ def pause_game(screen, clock, game):
         clock.tick(60)
 
         for event in pygame.event.get():
+            if menu_state == 'Volume':
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT and game.volume > 0:
+                        game.nav_sound.play()
+                        game.volume -= 1
+                        game.update_sound_volume()
+
+                    elif event.key == pygame.K_RIGHT and game.volume < 10:
+                        game.nav_sound.play()
+                        game.volume += 1
+                        game.update_sound_volume()
+
+                    elif event.key == pygame.K_BACKSPACE or event.key == pygame.K_ESCAPE:
+                        game.goback_sound.play()
+                        menu_state = 'Main'
+
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -426,7 +443,7 @@ def pause_game(screen, clock, game):
                     if choice == 'Resume':
                         return 'Resume'
                     elif choice == 'Volume':
-                        pass
+                        menu_state = 'Volume'
                     elif choice == 'Quit':
                         return 'Quit'
 
@@ -435,21 +452,31 @@ def pause_game(screen, clock, game):
         overlay.fill((0, 0, 0))
         screen.blit(overlay, (0, 0))
 
-        text = font.render('Paused', True, (255, 255, 255))
-        rect = text.get_rect(center = (mid_w, mid_h - 60))
-        screen.blit(text, rect)
+        if menu_state == 'Main':
+            text = font.render('Paused', True, (255, 255, 255))
+            rect = text.get_rect(center = (mid_w, mid_h - 60))
+            screen.blit(text, rect)
 
-        for i, option in enumerate(options):
-            color = (255, 255, 255)
-            text_surface = font.render(option, True, color)
-            text_rectangle = text_surface.get_rect(center = (mid_w, mid_h + i * 40))
-            screen.blit(text_surface, text_rectangle)
+            for i, option in enumerate(options):
+                color = (255, 255, 255)
+                text_surface = font.render(option, True, color)
+                text_rectangle = text_surface.get_rect(center = (mid_w, mid_h + i * 40))
+                screen.blit(text_surface, text_rectangle)
 
-        cursor_x = mid_w + offset
-        cursor_y = mid_h + state_index * 37
-        pygame.draw.polygon(screen, (255, 255, 255), [(cursor_x, cursor_y), (cursor_x + 15, cursor_y + 10), (cursor_x, cursor_y + 20)])
+            cursor_x = mid_w + offset
+            cursor_y = mid_h + state_index * 37
+            pygame.draw.polygon(screen, (255, 255, 255), [(cursor_x, cursor_y), (cursor_x + 15, cursor_y + 10), (cursor_x, cursor_y + 20)])
+
+        elif menu_state == 'Volume':
+            title = font.render('Volume', True, (255, 255, 255))
+            value = font.render(f'{game.volume} / 10', True, (255, 255, 255))
+
+            screen.blit(title, title.get_rect(center=(mid_w, mid_h - 40)))
+            screen.blit(value, value.get_rect(center=(mid_w, mid_h + 10)))
 
         pygame.display.flip()
+    
+    return 'Resume'
 
 
 def main(game):
