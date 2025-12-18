@@ -12,6 +12,8 @@ import heapq
 
 import sys
 
+from sound import sfx_zwaard, sfx_voetstappen, sfx_punch
+
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1000, 600    # window size
 TILE = 32                        # tile size for pathfinding grid
@@ -149,10 +151,22 @@ class Player(pygame.sprite.Sprite):
     def handle_input(self):
         keys = pygame.key.get_pressed()
         dx, dy = 0, 0
-        if keys[pygame.K_q]: dx -= self.speed
-        if keys[pygame.K_d]: dx += self.speed
-        if keys[pygame.K_z]: dy -= self.speed
-        if keys[pygame.K_s]: dy += self.speed
+        if keys[pygame.K_q]: 
+            dx -= self.speed
+            if pygame.mixer.get_busy() == False:
+               sfx_voetstappen.play()
+        if keys[pygame.K_d]: 
+            dx += self.speed
+            if pygame.mixer.get_busy() == False:
+               sfx_voetstappen.play()
+        if keys[pygame.K_z]: 
+            dy -= self.speed
+            if pygame.mixer.get_busy() == False:
+               sfx_voetstappen.play()
+        if keys[pygame.K_s]: 
+            dy += self.speed
+            if pygame.mixer.get_busy() == False:
+               sfx_voetstappen.play()
         return dx, dy
 
     def move(self, dx, dy, walls):
@@ -647,6 +661,11 @@ def main(game):
     # Camera uses real map size
     camera = Camera(SCREEN_W, SCREEN_H, world_w, world_h)
 
+    pygame.mixer.init()
+    pygame.mixer.music.load('sounds\muziek.ogg')
+    pygame.mixer.music.play(loops=-1)
+    pygame.mixer.music.set_volume(.3)
+
     # Player start: first free tile near top-left
     start_tx, start_ty = 70,70
     if (start_tx, start_ty) in blocked_tiles:
@@ -783,6 +802,8 @@ def main(game):
             dir_x = world_mx - player.rect.centerx
             dir_y = world_my - player.rect.centery
             length_dir = math.hypot(dir_x, dir_y)
+            if pygame.mixer.get_busy() == False:
+               sfx_zwaard.play()
             if length_dir != 0:
                 dir_x /= length_dir
                 dir_y /= length_dir
@@ -797,6 +818,7 @@ def main(game):
                         kb_dx = e.rect.centerx - player.rect.centerx
                         kb_dy = e.rect.centery - player.rect.centery
                         kb_len = math.hypot(kb_dx, kb_dy)
+                        sfx_punch.play() 
                         if kb_len == 0:
                             kb_dx, kb_dy = 0.0, -1.0
                             kb_len = 1.0
