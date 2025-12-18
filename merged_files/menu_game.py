@@ -105,7 +105,7 @@ class Game():
 
     def run_gameplay(self):
         pygame.mixer.music.stop()
-        gameplay.main()
+        gameplay.main(self)
         if not pygame.mixer.get_init():
             pygame.mixer.init()
         pygame.mixer.music.load('Assets\Music\main_menu_cut.mp3')

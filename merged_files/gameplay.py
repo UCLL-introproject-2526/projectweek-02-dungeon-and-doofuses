@@ -452,7 +452,7 @@ def pause_game(screen, clock, game):
         pygame.display.flip()
 
 
-def main():
+def main(game):
     pygame.init()
     pygame.display.set_caption('Game')
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
@@ -547,6 +547,7 @@ def main():
     current_room = None
 
     run = True
+    paused = False
     while run:
         clock.tick(FPS)
         for event in pygame.event.get():
@@ -560,12 +561,18 @@ def main():
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    from menu_game import Game
-                    game = Game()
-                    result = pause_game(screen, clock, game)
-                    if result == 'Quit': 
-                        return
+                   paused = True 
+
+            if paused:
+                pygame.event.clear(pygame.KEYDOWN)
+                result = pause_game(screen, clock, game)
             
+
+                if result == 'Quit':
+                    return
+                
+                paused = False
+                continue
         # Update
         player.update(walls, world_rect)
         camera.center_on(player.rect)
