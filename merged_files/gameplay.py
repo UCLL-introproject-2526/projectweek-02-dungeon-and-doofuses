@@ -9,9 +9,11 @@ import pygame
 import random
 import math
 import heapq
+from menu_game import *
+import sys
 
 # ---------------------- CONFIG ----------------------
-SCREEN_W, SCREEN_H = 1200, 800    # window size
+SCREEN_W, SCREEN_H = 1000, 600    # window size
 TILE = 32                        # tile size for pathfinding grid
 FPS = 60
 
@@ -293,6 +295,68 @@ def build_world_from_map(map_surface, TILE=32, alpha_threshold=8):
     return world_w, world_h, grid_w, grid_h, blocked_tiles, walls
 
 # ---------------------- MAIN -------------------------
+def pause_game(screen, clock, game):
+    pygame.init()
+    paused = True
+    font = pygame.font.Font('8-BIT WONDER.TTF', 30)
+
+    options = ['Resume', 'Volume', 'Quit']
+    state_index = 0
+
+    mid_w, mid_h = screen.get_width()//2, screen.get_height()//2
+    offset = -130
+
+    while paused:
+        clock.tick(60)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    paused = False
+
+                elif event.key == pygame.K_UP:
+                    state_index = (state_index - 1) % len(options)
+                    game.nav_sound.play()
+
+                elif event.key == pygame.K_DOWN:
+                    state_index = (state_index + 1) % len(options)
+                    game.nav_sound.play()
+
+                elif event.key == pygame.K_RETURN:
+                    game.select_sound.play()
+                    choice = options[state_index]
+                    if choice == 'Resume':
+                        return 'Resume'
+                    elif choice == 'Volume':
+                        pass
+                    elif choice == 'Quit':
+                        return 'Quit'
+
+        overlay = pygame.Surface((1000, 600))
+        overlay.set_alpha(150)
+        overlay.fill((0, 0, 0))
+        screen.blit(overlay, (0, 0))
+
+        text = font.render('Paused', True, (255, 255, 255))
+        rect = text.get_rect(center = (mid_w, mid_h - 60))
+        screen.blit(text, rect)
+
+        for i, option in enumerate(options):
+            color = (255, 255, 255)
+            text_surface = font.render(option, True, color)
+            text_rectangle = text_surface.get_rect(center = (mid_w, mid_h + i * 40))
+            screen.blit(text_surface, text_rectangle)
+
+        cursor_x = mid_w + offset
+        cursor_y = mid_h + state_index * 37
+        pygame.draw.polygon(screen, (255, 255, 255), [(cursor_x, cursor_y), (cursor_x + 15, cursor_y + 10), (cursor_x, cursor_y + 20)])
+
+        pygame.display.flip()
+
 
 def main():
     pygame.init()
@@ -364,12 +428,21 @@ def main():
         clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                run = False
+                pygame.quit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1 and not attacking and player.cooldown_timer == 0:
                     attacking = True
                     attack_timer = ATTACK_DURATION
 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    from menu_game import Game
+                    game = Game()
+                    result = pause_game(screen, clock, game)
+                    if result == 'Quit': 
+                        return
+            
         # Update
         player.update(walls, world_rect)
         camera.center_on(player.rect)
@@ -467,5 +540,5 @@ def main():
 
         pygame.display.flip()
 
-    pygame.quit()
-
+    # pygame.quit()
+    return

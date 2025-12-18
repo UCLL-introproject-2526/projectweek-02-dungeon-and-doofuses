@@ -25,6 +25,7 @@ class MainMenu(Menu):
         self.creditsx, self.creditsy = self.mid_w, self.mid_h + 130
         self.exitx, self.exity = self.mid_w, self.mid_h + 150
         self.cursor_rectangle.midtop = (self.startx + self.offset, self.starty)
+        
         self.logo_sheet = pygame.image.load('Logo_gold_2.png').convert_alpha()
         self.frame_width = 1280
         self.frame_height = 580
@@ -101,7 +102,7 @@ class MainMenu(Menu):
         if self.game.START_KEY:
             self.game.select_sound.play()
             if self.state == 'Start':
-                self.game.run_gameplay()
+                self.game.next_action = 'Start'
             elif self.state == 'Options':
                 self.game.current_menu = self.game.options
             elif self.state == 'Credits':
@@ -247,174 +248,174 @@ class CreditsMenu(Menu):
             self.game.draw_text('Made by Dungeon and Doofuses', 15, self.game.display_w/2, self.game.display_h/2 + 10)
             self.blit_screen()
 
-class PauseMenu(Menu):
-    def __init__(self, game):
-        Menu.__init__(self, game)
-        self.state = 'Resume'
+# class PauseMenu(Menu):
+#     def __init__(self, game):
+#         Menu.__init__(self, game)
+#         self.state = 'Resume'
 
-        self.resumex, self.resumey = self.mid_w, self.mid_h - 10
-        self.volx, self.voly = self.mid_w, self.mid_h + 10
-        self.quitx, self.quity = self.mid_w, self.mid_h + 30
+#         self.resumex, self.resumey = self.mid_w, self.mid_h - 10
+#         self.volx, self.voly = self.mid_w, self.mid_h + 10
+#         self.quitx, self.quity = self.mid_w, self.mid_h + 30
 
-        self.cursor_rectangle.midtop = (self.resumex + self.offset, self.resumey)
+#         self.cursor_rectangle.midtop = (self.resumex + self.offset, self.resumey)
 
-    def draw_overlay(self):
-        overlay = pygame.Surface((self.game.display_w, self.game.display_h))
-        overlay.set_alpha(150) #0 = invisible, 255 = solid
-        overlay.fill((0, 0, 0))
-        self.game.display.blit(overlay, (0, 0))
+#     def draw_overlay(self):
+#         overlay = pygame.Surface((self.game.display_w, self.game.display_h))
+#         overlay.set_alpha(150) #0 = invisible, 255 = solid
+#         overlay.fill((0, 0, 0))
+#         self.game.display.blit(overlay, (0, 0))
 
-    def display_menu(self):
-        self.run_display = True
-        while self.run_display:
-            self.game.check_events()
-            self.check_input()
-            self.draw_overlay()
+#     def display_menu(self):
+#         self.run_display = True
+#         while self.run_display:
+#             self.game.check_events()
+#             self.check_input()
+#             self.draw_overlay()
 
-            self.game.draw_text('Paused', 20, self.game.display_w/2, self.game.display_h/2 - 40)
+#             self.game.draw_text('Paused', 20, self.game.display_w/2, self.game.display_h/2 - 40)
 
-            self.game.draw_text('Resume', 15, self.resumex, self.resumey)
-            self.game.draw_text('Volume', 15, self.volx, self.voly)
-            self.game.draw_text('Quit', 15, self.quitx, self.quity)
+#             self.game.draw_text('Resume', 15, self.resumex, self.resumey)
+#             self.game.draw_text('Volume', 15, self.volx, self.voly)
+#             self.game.draw_text('Quit', 15, self.quitx, self.quity)
 
-            self.draw_cursor()
-            self.blit_screen()
+#             self.draw_cursor()
+#             self.blit_screen()
 
-    def move_cursor(self):
-        if self.game.DOWN_KEY:
-            self.game.nav_sound.play()
-            if self.state == 'Resume':
-                self.state = 'Volume'
-                self.cursor_rectangle.midtop = (self.volx + self.offset, self.voly)
-            elif self.state == 'Volume':
-                self.state = 'Quit'
-                self.cursor_rectangle.midtop = (self.quitx + self.offset, self.quity)
-            elif self.state == 'Quit':
-                self.state = 'Resume'
-                self.cursor_rectangle.midtop = (self.resumex + self.offset, self.resumey)
+#     def move_cursor(self):
+#         if self.game.DOWN_KEY:
+#             self.game.nav_sound.play()
+#             if self.state == 'Resume':
+#                 self.state = 'Volume'
+#                 self.cursor_rectangle.midtop = (self.volx + self.offset, self.voly)
+#             elif self.state == 'Volume':
+#                 self.state = 'Quit'
+#                 self.cursor_rectangle.midtop = (self.quitx + self.offset, self.quity)
+#             elif self.state == 'Quit':
+#                 self.state = 'Resume'
+#                 self.cursor_rectangle.midtop = (self.resumex + self.offset, self.resumey)
 
-        elif self.game.UP_KEY:
-            self.game.nav_sound.play()
-            if self.state == 'Resume':
-                self.state = 'Quit'
-                self.cursor_rectangle.midtop = (self.quitx + self.offset, self.quity)
-            elif self.state == 'Volume':
-                self.state = 'Resume'
-                self.cursor_rectangle.midtop = (self.resumex + self.offset, self.resumey)
-            elif self.state == 'Quit':
-                self.state = 'Volume'
-                self.cursor_rectangle.midtop= (self.volx + self.offset, self.voly)
+#         elif self.game.UP_KEY:
+#             self.game.nav_sound.play()
+#             if self.state == 'Resume':
+#                 self.state = 'Quit'
+#                 self.cursor_rectangle.midtop = (self.quitx + self.offset, self.quity)
+#             elif self.state == 'Volume':
+#                 self.state = 'Resume'
+#                 self.cursor_rectangle.midtop = (self.resumex + self.offset, self.resumey)
+#             elif self.state == 'Quit':
+#                 self.state = 'Volume'
+#                 self.cursor_rectangle.midtop= (self.volx + self.offset, self.voly)
 
-    def check_input(self):
-        self.move_cursor()
+#     def check_input(self):
+#         self.move_cursor()
 
-        if self.game.START_KEY:
-            self.game.select_sound.play()
+#         if self.game.START_KEY:
+#             self.game.select_sound.play()
 
-            if self.state == 'Resume':
-                self.game.paused = False
-                self.run_display = False
+#             if self.state == 'Resume':
+#                 self.game.paused = False
+#                 self.run_display = False
 
-            elif self.state == 'Volume':
-                self.game.current_menu = self.game.pause_volume_menu
-                self.run_display = False
+#             elif self.state == 'Volume':
+#                 self.game.current_menu = self.game.pause_volume_menu
+#                 self.run_display = False
 
-            elif self.state == 'Quit':
-                self.game.paused = False
-                self.game.playing = False
-                self.game.current_menu = self.game.main_menu
-                self.run_display = False
+#             elif self.state == 'Quit':
+#                 self.game.paused = False
+#                 self.game.playing = False
+#                 self.game.current_menu = self.game.main_menu
+#                 self.run_display = False
 
-        if self.game.START_KEY and self.state == 'Resume':
-            self.game.paused = False
-            self.run_display = False
+#         if self.game.START_KEY and self.state == 'Resume':
+#             self.game.paused = False
+#             self.run_display = False
 
-class PauseVolumeMenu(Menu):
-    def __init__(self, game):
-        Menu.__init__(self, game)
+# class PauseVolumeMenu(Menu):
+#     def __init__(self, game):
+#         Menu.__init__(self, game)
 
-    def display_menu(self):
-        self.run_display = True
-        while self.run_display:
-            self.game.check_events()
-            self.check_input()
-            self.game.display.fill(self.game.black)
-            self.game.draw_text('Volume', 20, self.game.display_w/2, self.game.display_h/2 - 30)
-            volume_text = f'{self.game.volume} / 10'
-            self.game.draw_text(volume_text, 20, self.game.display_w/2, self.game.display_h/2 + 10)
-            self.blit_screen()
+#     def display_menu(self):
+#         self.run_display = True
+#         while self.run_display:
+#             self.game.check_events()
+#             self.check_input()
+#             self.game.display.fill(self.game.black)
+#             self.game.draw_text('Volume', 20, self.game.display_w/2, self.game.display_h/2 - 30)
+#             volume_text = f'{self.game.volume} / 10'
+#             self.game.draw_text(volume_text, 20, self.game.display_w/2, self.game.display_h/2 + 10)
+#             self.blit_screen()
         
-    def check_input(self):
-        if self.game.LEFT_KEY and self.game.volume > 0:
-            self.game.nav_sound.play()
-            self.game.volume -= 1
-            self.game.update_sound_volume()
-            pygame.mixer.music.set_volume(self.game.volume/10)
-        if self.game.RIGHT_KEY and self.game.volume < 10:
-            self.game.nav_sound.play()
-            self.game.volume += 1
-            self.game.update_sound_volume()
-            pygame.mixer.music.set_volume(self.game.volume/10)
-        if self.game.BACK_KEY:
-            self.game.goback_sound.play()
-            self.game.current_menu = self.game.pause_menu
-            self.run_display = False
+#     def check_input(self):
+#         if self.game.LEFT_KEY and self.game.volume > 0:
+#             self.game.nav_sound.play()
+#             self.game.volume -= 1
+#             self.game.update_sound_volume()
+#             pygame.mixer.music.set_volume(self.game.volume/10)
+#         if self.game.RIGHT_KEY and self.game.volume < 10:
+#             self.game.nav_sound.play()
+#             self.game.volume += 1
+#             self.game.update_sound_volume()
+#             pygame.mixer.music.set_volume(self.game.volume/10)
+#         if self.game.BACK_KEY:
+#             self.game.goback_sound.play()
+#             self.game.current_menu = self.game.pause_menu
+#             self.run_display = False
 
-class GameOverMenu(Menu):
-    def __init__(self, game):
-        Menu.__init__(self, game)
-        self.state = 'Yes'
+# class GameOverMenu(Menu):
+#     def __init__(self, game):
+#         Menu.__init__(self, game)
+#         self.state = 'Yes'
 
-        self.yesx, self.yesy = self.mid_w, self.mid_h + 20
-        self.nox, self.noy = self.mid_w, self.mid_h + 40
+#         self.yesx, self.yesy = self.mid_w, self.mid_h + 20
+#         self.nox, self.noy = self.mid_w, self.mid_h + 40
 
-        self.cursor_rectangle.midtop = (self.yesx + self.offset, self.yesy)
+#         self.cursor_rectangle.midtop = (self.yesx + self.offset, self.yesy)
 
-    def display_menu(self):
-        self.run_display = True
-        while self.run_display:
-            self.game.check_events()
-            self.check_input()
+#     def display_menu(self):
+#         self.run_display = True
+#         while self.run_display:
+#             self.game.check_events()
+#             self.check_input()
 
-            self.game.display.fill(self.game.black)
+#             self.game.display.fill(self.game.black)
 
-            self.game.draw_text('GAME OVER', 25, self.game.display_w/2, self.game.display_h/2 - 40)
+#             self.game.draw_text('GAME OVER', 25, self.game.display_w/2, self.game.display_h/2 - 40)
 
-            self.game.draw_text('Play Again?', 15, self.game.display_w/2, self.game.display_h/2 - 10)
+#             self.game.draw_text('Play Again?', 15, self.game.display_w/2, self.game.display_h/2 - 10)
 
-            self.game.draw_text('Yes', 15, self.yesx, self.yesy)
-            self.game.draw_text('No', 15, self.nox, self.noy)
+#             self.game.draw_text('Yes', 15, self.yesx, self.yesy)
+#             self.game.draw_text('No', 15, self.nox, self.noy)
 
-            self.draw_cursor()
-            self.blit_screen()
+#             self.draw_cursor()
+#             self.blit_screen()
 
-    def move_cursor(self):
-        if self.game.UP_KEY or self.game.DOWN_KEY:
-            self.game.nav_sound.play()
+#     def move_cursor(self):
+#         if self.game.UP_KEY or self.game.DOWN_KEY:
+#             self.game.nav_sound.play()
 
-        if self.state == 'Yes':
-            self.state = 'No'
-            self.cursor_rectangle.midtop = (self.yesx + self.offset, self.yesy)
+#         if self.state == 'Yes':
+#             self.state = 'No'
+#             self.cursor_rectangle.midtop = (self.yesx + self.offset, self.yesy)
 
-    def check_input(self):
-        self.move_cursor()
+#     def check_input(self):
+#         self.move_cursor()
 
-        if self.game.START_KEY:
-            self.game.select_sound.play()
+#         if self.game.START_KEY:
+#             self.game.select_sound.play()
 
-            if self.state == 'Yes':
-                self.restart_game()
-            elif self.state == 'No':
-                self.game.current_menu = self.game.main_menu
+#             if self.state == 'Yes':
+#                 self.restart_game()
+#             elif self.state == 'No':
+#                 self.game.current_menu = self.game.main_menu
 
-            self.run_display = False
+#             self.run_display = False
 
-    def restart_game(self):
-        self.game.game_over = False
-        self.game.playing = True
+#     def restart_game(self):
+#         self.game.game_over = False
+#         self.game.playing = True
 
-        # Reset player, level, score here later
-        # Example:
-        # self.game.player.reset()
+#         # Reset player, level, score here later
+#         # Example:
+#         # self.game.player.reset()
 
-        self.game.current_menu = None
+#         self.game.current_menu = None
