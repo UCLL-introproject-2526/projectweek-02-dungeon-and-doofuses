@@ -132,7 +132,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, speed=5, max_hp=10, cooldown=4):
         super().__init__()
         # Load hero sprite (Path -> str)
-        self.image = pygame.image.load(str('merged_files\Assets\Hero_basic_24x24.png')).convert_alpha()
+        self.image = pygame.image.load(str('Assets\img\Hero_basic_24x24.png')).convert_alpha()
         # scale pixel art (x2)
         self.image = pygame.transform.scale_by(self.image, 2)
         self.rect = self.image.get_rect(topleft=(x, y))
@@ -328,9 +328,7 @@ class Door(pygame.sprite.Sprite):
 
     def start_timer(self, seconds =1):
         if self.opened and self.timer == -1:
-            print("TIMER STARTED")
             self.timer = seconds * 60
-            print("time: ",self.timer)
 
 
     
@@ -341,7 +339,6 @@ class Door(pygame.sprite.Sprite):
             for sprite in self.wall_sprites:
                 walls.add(sprite)
             self.opened = False
-            print("Door closed")
 
     def open(self, blocked_tiles, walls):
         """Manually open the door"""
@@ -353,12 +350,9 @@ class Door(pygame.sprite.Sprite):
         self.timer = 0
 
     def update(self, blocked_tiles, walls):
-        print(f"time in the update function: {self.timer}")
         if self.timer > 0:
             self.timer -= 1
-            print(self.timer)
             if self.timer == 0:
-                print("were closing for real")
                 self.close(blocked_tiles, walls)
                 self.timer = -1
 
@@ -398,7 +392,7 @@ def build_world_from_map(map_surface, TILE=32, alpha_threshold=8):
 def pause_game(screen, clock, game):
     pygame.init()
     paused = True
-    font = pygame.font.Font('merged_files\8-BIT WONDER.TTF', 30)
+    font = pygame.font.Font('Assets\8-BIT WONDER.TTF', 30)
 
     options = ['Resume', 'Volume', 'Quit']
     state_index = 0
@@ -465,11 +459,11 @@ def main():
     clock = pygame.time.Clock()
 
     # Load sword sprite AFTER display init
-    SWORD_IMG = pygame.image.load("Assets\Sword basic.png").convert_alpha()
+    SWORD_IMG = pygame.image.load("Assets\img\Sword.png").convert_alpha()
     SWORD_IMG = pygame.transform.scale_by(SWORD_IMG, 0.1)  # scale sword
 
     # Load map image (Path -> str)
-    map_surface = pygame.image.load(str('merged_files\Assets\map.png')).convert()
+    map_surface = pygame.image.load(str('Assets\img\map.png')).convert()
     # scale pixel art (x2)
     map_surface = pygame.transform.scale_by(map_surface, 2)
 
@@ -550,6 +544,7 @@ def main():
 
     # Track player's tile for path recompute
     player_tile = (player.rect.centerx // TILE, player.rect.centery // TILE)
+    current_room = None
 
     run = True
     while run:
@@ -639,7 +634,7 @@ def main():
             if not room.triggered and room.contains(player):
                 room.triggered = True  # Zorg dat dit direct op True gaat
                 current_room = room
-                print(f"Kamer geactiveerd: {room.id}")
+               
         
                 # Start de timer voor alle deuren van deze kamer
                 for door in room.doors:
@@ -647,7 +642,6 @@ def main():
 
         # Update alle deuren (dit zorgt voor het aftellen)
         for door in Doors:
-            print("time before update function is called: ", door.timer)
             door.update(blocked_tiles, walls)
 
         if current_room:
@@ -704,15 +698,15 @@ def main():
             # pygame.draw.rect(screen, (250, 0, 0), debug_rect, 1)
 
         # Cooldown bar
-        bar_w, bar_h = 40, 6
-        bar_x = player.rect.centerx - bar_w // 2 - camera.offset.x
-        bar_y = player.rect.top - 12 - camera.offset.y
-        pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_w, bar_h))
-        if player.cooldown_timer > 0:
-            frac = player.cooldown_timer / COOLDOWN
-            pygame.draw.rect(screen, (200, 50, 50), (bar_x, bar_y, int(bar_w * (1 - frac)), bar_h))
-        else:
-            pygame.draw.rect(screen, (50, 200, 50), (bar_x, bar_y, bar_w, bar_h))
+        # bar_w, bar_h = 40, 6
+        # bar_x = player.rect.centerx - bar_w // 2 - camera.offset.x
+        # bar_y = player.rect.top - 12 - camera.offset.y
+        # pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_w, bar_h))
+        # if player.cooldown_timer > 0:
+        #     frac = player.cooldown_timer / COOLDOWN
+        #     pygame.draw.rect(screen, (200, 50, 50), (bar_x, bar_y, int(bar_w * (1 - frac)), bar_h))
+        # else:
+        #     pygame.draw.rect(screen, (50, 200, 50), (bar_x, bar_y, bar_w, bar_h))
 
         pygame.display.flip()
 
