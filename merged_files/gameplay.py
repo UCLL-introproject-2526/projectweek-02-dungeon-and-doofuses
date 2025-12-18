@@ -364,6 +364,10 @@ def main():
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     clock = pygame.time.Clock()
 
+    # Load sword sprite AFTER display init
+    SWORD_IMG = pygame.image.load("Assets/sword.png").convert_alpha()
+    SWORD_IMG = pygame.transform.scale_by(SWORD_IMG, 0.1)  # scale sword
+
     # Load map image (Path -> str)
     map_surface = pygame.image.load(str('Assets\map.png')).convert()
     # scale pixel art (x2)
@@ -519,13 +523,32 @@ def main():
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
 
 
+         # ---------------- SWORD VISUAL ----------------
+        if sword_hitbox:
+            # Angle from mouse direction (visual only)
+            angle_deg = math.degrees(math.atan2(-dir_y, dir_x))
+            angle_deg += -90 # adjust sword img rotation 
+
+            # Rotate sword sprite (does NOT affect collision)
+            rotated_sword = pygame.transform.rotate(SWORD_IMG, angle_deg)
+
+            # Draw sword centered on hitbox
+            sword_rect = rotated_sword.get_rect(
+                center=(
+                    sword_hitbox.centerx - camera.offset.x,
+                    sword_hitbox.centery - camera.offset.y
+                )
+            )
+
+            screen.blit(rotated_sword, sword_rect)
+
 
         # Debug: sword rect
         if sword_hitbox:
             debug_rect = pygame.Rect(sword_hitbox.x - camera.offset.x,
                                      sword_hitbox.y - camera.offset.y,
                                      sword_hitbox.width, sword_hitbox.height)
-            pygame.draw.rect(screen, (250, 0, 0), debug_rect, 1)
+            # pygame.draw.rect(screen, (250, 0, 0), debug_rect, 1)
 
         # Cooldown bar
         bar_w, bar_h = 40, 6
