@@ -26,7 +26,7 @@ class MainMenu(Menu):
         self.exitx, self.exity = self.mid_w, self.mid_h + 150
         self.cursor_rectangle.midtop = (self.startx + self.offset, self.starty)
         
-        self.logo_sheet = pygame.image.load('Logo_gold_2.png').convert_alpha()
+        self.logo_sheet = pygame.image.load('merged_files\Logo_gold_2.png').convert_alpha()
         self.frame_width = 1280
         self.frame_height = 580
         self.columns = self.logo_sheet.get_width()//self.frame_width
@@ -191,15 +191,15 @@ class ControlsMenu(Menu):
         Menu.__init__(self, game)
 
         size_keys = (64, 64)
-        self.key_z = pygame.transform.scale(pygame.image.load('.\controls\z.png').convert_alpha(), size_keys)
-        self.key_q = pygame.transform.scale(pygame.image.load('.\controls\q.png').convert_alpha(), size_keys)
-        self.key_s = pygame.transform.scale(pygame.image.load('.\controls\s.png').convert_alpha(), size_keys)
-        self.key_d = pygame.transform.scale(pygame.image.load('.\controls\d.png').convert_alpha(), size_keys)
+        self.key_z = pygame.transform.scale(pygame.image.load('merged_files\controls\z.png').convert_alpha(), size_keys)
+        self.key_q = pygame.transform.scale(pygame.image.load('merged_files\controls\q.png').convert_alpha(), size_keys)
+        self.key_s = pygame.transform.scale(pygame.image.load('merged_files\controls\s.png').convert_alpha(), size_keys)
+        self.key_d = pygame.transform.scale(pygame.image.load('merged_files\controls\d.png').convert_alpha(), size_keys)
 
-        self.arrow_right = pygame.transform.scale(pygame.image.load('.\\arrow.png').convert_alpha(), (96, 96))
+        self.arrow_right = pygame.transform.scale(pygame.image.load('Assets\arrow basic.png').convert_alpha(), (96, 96))
 
-        self.mouse_click = pygame.transform.scale(pygame.image.load('.\mouse_controls\LeftClick-Blue.png').convert_alpha(), (96, 96))
-        self.mouse_look = pygame.transform.scale(pygame.image.load('.\mouse_controls\MoveDiagonal.png').convert_alpha(), (96, 96))
+        self.mouse_click = pygame.transform.scale(pygame.image.load('merged_files\mouse_controls\LeftClick-Blue.png').convert_alpha(), (96, 96))
+        self.mouse_look = pygame.transform.scale(pygame.image.load('merged_files\mouse_controls\MoveDiagonal.png').convert_alpha(), (96, 96))
 
     def display_menu(self):
         self.run_display = True

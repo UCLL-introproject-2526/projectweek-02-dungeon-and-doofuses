@@ -12,7 +12,7 @@ class Game():
         self.display_w, self.display_h = 1000, 600
         self.display = pygame.Surface((self.display_w,self.display_h))
         self.window = pygame.display.set_mode((self.display_w,self.display_h))
-        self.font_name = '.\8-BIT WONDER.TTF'
+        self.font_name = 'merged_files\8-BIT WONDER.TTF'
         # self.font_name = pygame.font.get_default_font()
         self.black, self.white = (0, 0, 0), (255, 255, 255)
         self.main_menu = MainMenu(self)
@@ -34,12 +34,12 @@ class Game():
         pygame.mixer.init()
         pygame.mixer.music.set_volume(self.volume/10)
 
-        pygame.mixer.music.load('.\Music\main_menu_cut.mp3')
+        pygame.mixer.music.load('merged_files\Music\main_menu_cut.mp3')
         pygame.mixer.music.play(-1)
 
-        self.nav_sound = pygame.mixer.Sound('.\Music\main_menu_nav.wav')
-        self.select_sound = pygame.mixer.Sound('.\Music\main_menu_select_cut.wav')
-        self.goback_sound = pygame.mixer.Sound('.\Music\main_menu_goback_cut.wav')
+        self.nav_sound = pygame.mixer.Sound('merged_files\Music\main_menu_nav.wav')
+        self.select_sound = pygame.mixer.Sound('merged_files\Music\main_menu_select_cut.wav')
+        self.goback_sound = pygame.mixer.Sound('merged_files\Music\main_menu_goback_cut.wav')
         self.update_sound_volume()
 
     # def game_loop(self):
@@ -108,7 +108,7 @@ class Game():
         gameplay.main()
         if not pygame.mixer.get_init():
             pygame.mixer.init()
-        pygame.mixer.music.load('.\\Music\\main_menu_cut.mp3')
+        pygame.mixer.music.load('merged_files\Music\main_menu_cut.mp3')
         pygame.mixer.music.set_volume(self.volume/10)
         pygame.mixer.music.play(-1)
         self.current_menu = self.main_menu

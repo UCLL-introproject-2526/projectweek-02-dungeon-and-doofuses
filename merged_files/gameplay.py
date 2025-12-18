@@ -18,9 +18,9 @@ TILE = 32                        # tile size for pathfinding grid
 FPS = 60
 
 # Asset paths (relative to this script)
-ASSETS_DIR = Path('Merged/Assets')
-HERO_IMG = ASSETS_DIR / 'Assets\Hero_basic_24x24.png'  # use your actual filename
-MAP_IMG  = ASSETS_DIR / 'Assets\map.png'          # pre-generated map image
+ASSETS_DIR = Path('merged_files\Assets')
+HERO_IMG = ASSETS_DIR / 'merged_files\Assets\Hero_basic_24x24.png'  # use your actual filename
+MAP_IMG  = ASSETS_DIR / 'merged_files\Assets\map.png'          # pre-generated map image
 
 # ---------------------- CAMERA ----------------------
 class Camera:
@@ -66,6 +66,22 @@ def rect_collides_walls(rect, walls_group):
         if rect.colliderect(w.rect):
             return True
     return False
+
+def spawn_locations(free_tiles, amount, player):
+    attempts = 0
+    locations = 0
+    free_tiles_list = list(free_tiles)
+    result = set()
+    while locations < amount and attempts < 1000:
+        attempts += 1
+        tx, ty = random.choice(free_tiles_list)
+        ex = tx * TILE + TILE // 2
+        ey = ty * TILE + TILE // 2
+        if abs(ex - player.rect.centerx) + abs(ey - player.rect.centery) < TILE * 4:
+            continue
+        result.add((ex,ey))
+        locations += 1
+    return result
 
 # ---------------------- A* PATHFINDING ---------------
 def astar(start, goal, blocked, grid_w, grid_h):
@@ -116,7 +132,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, speed=5, max_hp=10, cooldown=4):
         super().__init__()
         # Load hero sprite (Path -> str)
-        self.image = pygame.image.load(str('Assets\Hero_basic_24x24.png')).convert_alpha()
+        self.image = pygame.image.load(str('merged_files\Assets\Hero_basic_24x24.png')).convert_alpha()
         # scale pixel art (x2)
         self.image = pygame.transform.scale_by(self.image, 2)
         self.rect = self.image.get_rect(topleft=(x, y))
@@ -263,6 +279,90 @@ class Wall(pygame.sprite.Sprite):
         self.image = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
         self.image.fill((250, 0, 250, 80))
 
+class Room (pygame.sprite.Sprite):
+    def __init__(self,roomid, x, y, w, h, doors):
+        super().__init__()
+        self.id = roomid
+        self.rect = pygame.Rect(x, y ,w ,h)
+        self.cleared = False
+        self.triggered = False
+        #just to make sure only one wave spawns
+        self.count = 0
+        #self.doors is supposed to be a iterable
+        self.doors = doors
+        self.tiles = {
+            (tx, ty)
+            for tx in range(self.rect.left // TILE, self.rect.right // TILE)
+            for ty in range(self.rect.top // TILE, self.rect.bottom // TILE)
+        }
+    def contains(self,player):
+        return pygame.sprite.collide_rect(self,player)
+    
+    def unlock(self,blocked_tiles,walls):
+        for d in self.doors:
+            d.open(blocked_tiles,walls)
+
+    def lock(self,blocked_tiles,walls):
+        for d in self.doors:
+            d.close(blocked_tiles,walls)
+
+class Door(pygame.sprite.Sprite):
+    def __init__(self, x, y, w, h, TILE=32):
+        super().__init__()
+        self.image = pygame.Surface((w, h))
+        self.image.fill((100, 100, 100))
+        self.rect = self.image.get_rect(topleft=(x, y))
+
+        self.opened = True
+        self.timer = -1
+        
+
+        # compute covered tiles
+        tx0 = x // TILE
+        ty0 = y // TILE
+        tw = w // TILE
+        th = h // TILE
+
+        self.tiles = [(tx0 + dx, ty0 + dy) for dy in range(th) for dx in range(tw)]
+        self.wall_sprites = [Wall(pygame.Rect(tx*TILE, ty*TILE, TILE, TILE)) for (tx, ty) in self.tiles]
+
+    def start_timer(self, seconds =1):
+        if self.opened and self.timer == -1:
+            print("TIMER STARTED")
+            self.timer = seconds * 60
+            print("time: ",self.timer)
+
+
+    
+    def close(self, blocked_tiles, walls):
+        if  self.opened:
+            for tile in self.tiles:
+                blocked_tiles.add(tile)
+            for sprite in self.wall_sprites:
+                walls.add(sprite)
+            self.opened = False
+            print("Door closed")
+
+    def open(self, blocked_tiles, walls):
+        """Manually open the door"""
+        for tile in self.tiles:
+            blocked_tiles.discard(tile)
+        for sprite in self.wall_sprites:
+            walls.remove(sprite)
+        self.opened = True
+        self.timer = 0
+
+    def update(self, blocked_tiles, walls):
+        print(f"time in the update function: {self.timer}")
+        if self.timer > 0:
+            self.timer -= 1
+            print(self.timer)
+            if self.timer == 0:
+                print("were closing for real")
+                self.close(blocked_tiles, walls)
+                self.timer = -1
+
+
 # ---------------------- MAP LOADING -----------------
 
 def build_world_from_map(map_surface, TILE=32, alpha_threshold=8):
@@ -298,7 +398,7 @@ def build_world_from_map(map_surface, TILE=32, alpha_threshold=8):
 def pause_game(screen, clock, game):
     pygame.init()
     paused = True
-    font = pygame.font.Font('8-BIT WONDER.TTF', 30)
+    font = pygame.font.Font('merged_files\8-BIT WONDER.TTF', 30)
 
     options = ['Resume', 'Volume', 'Quit']
     state_index = 0
@@ -365,11 +465,11 @@ def main():
     clock = pygame.time.Clock()
 
     # Load sword sprite AFTER display init
-    SWORD_IMG = pygame.image.load("Assets/sword.png").convert_alpha()
+    SWORD_IMG = pygame.image.load("Assets\Sword basic.png").convert_alpha()
     SWORD_IMG = pygame.transform.scale_by(SWORD_IMG, 0.1)  # scale sword
 
     # Load map image (Path -> str)
-    map_surface = pygame.image.load(str('Assets\map.png')).convert()
+    map_surface = pygame.image.load(str('merged_files\Assets\map.png')).convert()
     # scale pixel art (x2)
     map_surface = pygame.transform.scale_by(map_surface, 2)
 
@@ -399,21 +499,45 @@ def main():
     player = Player(start_x, start_y)
     player_group = pygame.sprite.GroupSingle(player)
 
-    # Enemies: spawn on random free tiles
+   # make rooms and doors
     enemies = pygame.sprite.Group()
-    attempts = 0
-    while len(enemies) < 10 and attempts < 1000:
-        attempts += 1
-        tx = random.randint(0, grid_w - 1)
-        ty = random.randint(0, grid_h - 1)
-        if (tx, ty) in blocked_tiles:
-            continue
-        ex = tx * TILE + TILE // 2
-        ey = ty * TILE + TILE // 2
-        if abs(ex - player.rect.centerx) + abs(ey - player.rect.centery) < TILE * 4:
-            continue
-        spd = random.uniform(0.6, 1.6)
-        enemies.add(Enemy(ex, ey, spd, hp=2))
+    rooms = pygame.sprite.Group()
+    Doors = pygame.sprite.Group()
+    door1room1 = Door(1346,1293,72,149)
+    door2room1 = Door(478,577,99,91)  
+    door1room2 = Door(1629,3555,100,88)
+    door2room2 = Door(766,3021,95,148) 
+    door1room3 = Door(3459,3597,89,146)
+    door2room3 = Door(3458,3787,89,152)
+    door1room4 = Door(3453,2085,100,73)
+    door2room4 = Door(3839,2110,98,50)
+    door1room5 = Door(3279,907,79,153)    
+    bossdoor = Door(2302,866,196,53)
+    
+    door1 = [door1room1,door2room1]
+    door2 = [door1room2,door2room2]
+    door3 = [door1room3,door2room3]
+    door4 = [door1room4,door2room4]
+    door5 = [door1room5] 
+
+    door_boss = [bossdoor]
+    Doors.add(bossdoor)
+    Doors.add(door1room1)
+    Doors.add(door2room1)
+    Doors.add(door1room2)
+    Doors.add(door2room2)
+    Doors.add(door1room3)
+    Doors.add(door2room3)
+    Doors.add(door1room4)
+    Doors.add(door2room4)
+    Doors.add(door1room5)
+    
+    rooms.add(Room("room1_fix",477,671,880,880,door1))
+    rooms.add(Room("room4_fix",3358,2157,675,720,door4))
+    rooms.add(Room("room5_fix",3359,333,865,818,door5))
+    rooms.add(Room("room2_fix",863,2829,960,723,door2))
+    rooms.add(Room("room3_fix",3551,3500,769,629,door3))
+    rooms.add(Room("boss",1631,45,1538,819,door_boss))
 
     # Combat state
     attacking = False
@@ -510,6 +634,34 @@ def main():
                 attacking = False
                 player.cooldown_timer = COOLDOWN
 
+        for room in rooms:
+            # Check of de speler binnenstapt EN of de kamer nog niet geactiveerd was
+            if not room.triggered and room.contains(player):
+                room.triggered = True  # Zorg dat dit direct op True gaat
+                current_room = room
+                print(f"Kamer geactiveerd: {room.id}")
+        
+                # Start de timer voor alle deuren van deze kamer
+                for door in room.doors:
+                    door.start_timer(1) # 1 seconde
+
+        # Update alle deuren (dit zorgt voor het aftellen)
+        for door in Doors:
+            print("time before update function is called: ", door.timer)
+            door.update(blocked_tiles, walls)
+
+        if current_room:
+            if not current_room.doors[0].opened and current_room.count == 0:
+                current_room.count = 1
+                free_tiles = current_room.tiles - blocked_tiles
+                locations = spawn_locations(free_tiles,10,player)
+                for location in locations:
+                    ex,ey = location
+                    enemies.add(Enemy(ex,ey,2,1))
+        
+        if current_room and current_room.count == 1 and len(enemies) == 0:
+            current_room.unlock(blocked_tiles,walls)
+
         # Draw
         screen.fill((0, 0, 0))
         screen.blit(map_surface, (-camera.offset.x, -camera.offset.y))
@@ -518,6 +670,7 @@ def main():
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y - camera.offset.y))
         camera.blit_group(screen, enemies)
         camera.blit_group(screen, player_group)
+        camera.blit_group(screen,Doors)
 
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
