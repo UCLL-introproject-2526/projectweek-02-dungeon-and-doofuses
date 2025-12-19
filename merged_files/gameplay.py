@@ -495,6 +495,8 @@ class Door(pygame.sprite.Sprite):
         self.image = pygame.Surface((w, h))
         self.image.fill((100, 100, 100))
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.x = x
+        self.y = y
 
         self.opened = True
         self.timer = -1
@@ -682,34 +684,33 @@ def main(game):
     key_anim_counter = 0
     if key_sheet:
         kw, kh = key_sheet.get_size()
-        # assume vertical strip of square frames
         if kh >= kw and kw > 0:
             n = kh // kw
             for i in range(n):
                 frame = key_sheet.subsurface(pygame.Rect(0, i * kw, kw, kw)).copy()
-                try:
-                    frame = pygame.transform.scale_by(frame, KEY_SCALE)
-                except Exception:
-                    frame = pygame.transform.scale(frame, (int(frame.get_width() * KEY_SCALE), int(frame.get_height() * KEY_SCALE)))
+                frame = pygame.transform.scale_by(frame, KEY_SCALE)
                 key_frames.append(frame)
-        else:
-            # single frame
-            try:
-                frame = pygame.transform.scale_by(key_sheet, KEY_SCALE)
-            except Exception:
-                frame = pygame.transform.scale(key_sheet, (int(key_sheet.get_width() * KEY_SCALE), int(key_sheet.get_height() * KEY_SCALE)))
-            key_frames.append(frame)
 
     # Font for HUD (8-BIT WONDER)
-    try:
-        HUD_FONT = pygame.font.Font(str(Path('Assets') / '8-BIT WONDER.TTF'), 20)
-    except Exception:
-        HUD_FONT = pygame.font.SysFont(None, 20)
+    HUD_FONT = pygame.font.Font(str(Path('Assets') / '8-BIT WONDER.TTF'), 20)
+   
 
     # Load map image (Path -> str)
     map_surface = pygame.image.load(str('Assets\img\map.png')).convert()
     # scale pixel art (x2)
     map_surface = pygame.transform.scale_by(map_surface, 2)
+
+    # Load spike sprite sheet (for door decoration). Try common filenames.
+    spike_sheet = None
+    spike_sheet = pygame.image.load(str('Assets\img\spikes activate.png')).convert_alpha()
+    spike_frames = []
+    if spike_sheet:
+        sw, sh = spike_sheet.get_size()
+        if sh >= sw and sw > 0:
+            # vertical strip -> take first square frame
+            frame = spike_sheet.subsurface(pygame.Rect(0, 0, sw, sw)).copy()
+            frame = pygame.transform.scale_by(frame, 0.1)
+            spike_frames.append(frame)
 
     # Build world from map without surfarray
     world_w, world_h, grid_w, grid_h, blocked_tiles, walls = build_world_from_map(
@@ -778,6 +779,12 @@ def main(game):
     Doors.add(door1room4)
     Doors.add(door2room4)
     Doors.add(door1room5)
+    # Make non-boss door images invisible 
+    # for d in Doors:
+    #     if d is bossdoor:
+    #         continue
+    #     d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
+    #     d.image.fill((0, 0, 0, 0))
     
     rooms.add(Room("room1_fix",477,671,880,880,door1))
     rooms.add(Room("room4_fix",3358,2157,675,720,door4))
@@ -830,6 +837,8 @@ def main(game):
                 paused = False
                 continue
         # Update
+        # save previous player position to prevent entering boss room without enough keys
+        prev_player_x, prev_player_y = player.x, player.y
         player.update(walls, world_rect)
         camera.center_on(player.rect)
 
@@ -928,10 +937,15 @@ def main(game):
         for room in rooms:
             # Check of de speler binnenstapt EN of de kamer nog niet geactiveerd was
             if not room.triggered and room.contains(player):
+                # Boss room requires 5 keys to enter
+                if room.id == 'boss' and current_keys < 5:
+                    # revert player position to previous frame (prevent entering)
+                    player.x, player.y = prev_player_x, prev_player_y
+                    player.rect.topleft = (int(player.x), int(player.y))
+                    continue
                 room.triggered = True  # Zorg dat dit direct op True gaat
                 current_room = room
-               
-        
+
                 # Start de timer voor alle deuren van deze kamer
                 for door in room.doors:
                     door.start_timer(1) # 1 seconde
@@ -967,6 +981,15 @@ def main(game):
         camera.blit_group(screen, player_group)
         camera.blit_group(screen,Doors)
         camera.blit_group(screen,Projectile_group)
+
+        # Draw spike decoration for non-boss doors (one spike frame per door tile)
+        # for d in Doors:
+        #     if d is bossdoor:
+        #         continue
+        #     else:
+        #         px = d.x - camera.offset.x 
+        #         py = d.y - camera.offset.y + 50
+        #         screen.blit(spike_frames[0], (px, py))
 
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
