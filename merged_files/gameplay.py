@@ -12,7 +12,7 @@ import heapq
 
 import sys
 
-from sound import sfx_zwaard, sfx_voetstappen, sfx_punch
+from sound import sfx_zwaard, sfx_voetstappen, sfx_punch, sfx_damage, channel1, channel2, channel3, channel4
 
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1000, 600    # window size
@@ -184,6 +184,20 @@ class Player(pygame.sprite.Sprite):
 
     def process_event(self, event):
         """Call from the main event loop to track KEYDOWN/KEYUP state for smooth movement."""
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_q]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+        if keys[pygame.K_s]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+        if keys[pygame.K_d]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+        if keys[pygame.K_z]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_q:
                 self.move_left = True
@@ -232,6 +246,7 @@ class Player(pygame.sprite.Sprite):
             self.hp -= amount
             self.vincible = True
             self.last_hit = current_time
+            channel4.play(sfx_damage)
         if self.hp <= 0: self.die()
 
     def die(self):
@@ -980,8 +995,8 @@ def main(game):
             dir_x = world_mx - player.rect.centerx
             dir_y = world_my - player.rect.centery
             length_dir = math.hypot(dir_x, dir_y)
-            if pygame.mixer.get_busy() == False:
-               sfx_zwaard.play()
+            if channel1.get_busy() == False:
+               channel1.play(sfx_zwaard)
             if length_dir != 0:
                 dir_x /= length_dir
                 dir_y /= length_dir
@@ -996,7 +1011,8 @@ def main(game):
                         kb_dx = e.rect.centerx - player.rect.centerx
                         kb_dy = e.rect.centery - player.rect.centery
                         kb_len = math.hypot(kb_dx, kb_dy)
-                        sfx_punch.play() 
+                        if channel3.get_busy() == False:
+                            channel3.play(sfx_punch)
                         if kb_len == 0:
                             kb_dx, kb_dy = 0.0, -1.0
                             kb_len = 1.0
