@@ -235,8 +235,9 @@ class Player(pygame.sprite.Sprite):
         if self.hp <= 0: self.die()
 
     def die(self):
-        print("Speler is verslagen!")
-        self.kill() # Verwijdert de speler uit alle groepen
+        # print("Speler is verslagen!")
+        # self.kill() # Verwijdert de speler uit alle groepen
+        self.hp <= 0
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, damage, hp=2):
@@ -863,7 +864,7 @@ def main(game):
     # Track player's tile for path recompute
     player_tile = (player.rect.centerx // TILE, player.rect.centery // TILE)
     current_room = None
-    
+    VICTORY_ZONE = pygame.Rect(2302,0,196,1)
 
     run = True
     paused = False
@@ -1124,6 +1125,12 @@ def main(game):
             pygame.draw.rect(screen, (220, 200, 20), (hud_x, hud_y, 16, 8))
             txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
             screen.blit(txt, (hud_x + 22, hud_y - 2))
+
+        if player.hp <= 0:
+            return "GAME_OVER"
+                
+        if player.rect.colliderect(VICTORY_ZONE):
+            return 'VICTORY'
 
         pygame.display.flip()
 

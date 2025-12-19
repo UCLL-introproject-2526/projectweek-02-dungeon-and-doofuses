@@ -20,6 +20,8 @@ class Game():
         self.volume_menu = VolumeMenu(self)
         self.controls_menu = ControlsMenu(self)
         self.credits = CreditsMenu(self)
+        self.game_over_menu = GameOverMenu(self)
+        self.victory_menu = VictoryMenu(self)
         self.current_menu = self.main_menu
         self.next_action = None
 
@@ -105,10 +107,15 @@ class Game():
 
     def run_gameplay(self):
         pygame.mixer.music.stop()
-        gameplay.main(self)
+        result = gameplay.main(self)
+        if result == "GAME_OVER":
+            self.current_menu = self.game_over_menu
+        elif result == "VICTORY":
+            self.current_menu = self.victory_menu
+        else:
+            self.current_menu = self.main_menu
         if not pygame.mixer.get_init():
             pygame.mixer.init()
         pygame.mixer.music.load('Assets\Music\main_menu_cut.mp3')
         pygame.mixer.music.set_volume(self.volume/10)
         pygame.mixer.music.play(-1)
-        self.current_menu = self.main_menu

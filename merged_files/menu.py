@@ -248,6 +248,97 @@ class CreditsMenu(Menu):
             self.game.draw_text('Made by Dungeon and Doofuses', 15, self.game.display_w/2, self.game.display_h/2 + 10)
             self.blit_screen()
 
+class GameOverMenu(Menu):
+    def __init__(self, game):
+        super().__init__(game)
+
+        # menu state
+        self.state = 'Yes'
+
+        # layout
+        spacing = 80
+        self.button_y = self.mid_h + 30
+
+        self.yesx, self.yesy = self.mid_w - spacing, self.button_y
+        self.nox, self.noy = self.mid_w + spacing, self.button_y
+
+        # cursor
+        self.cursor_offset_x = -30
+
+    def display_menu(self):
+        self.run_display = True
+
+        # SAFE cursor initialization (yesx exists here)
+        self.cursor_rectangle.midtop = (
+            self.yesx + self.cursor_offset_x,
+            self.yesy
+        )
+
+        while self.run_display:
+            self.game.check_events()
+            self.check_input()
+            self.game.display.fill(self.game.black)
+
+            title_y = self.mid_h - 80
+            subtitle_y = self.mid_h - 40
+
+            self.game.draw_text("GAME OVER", 32, self.mid_w, title_y)
+            self.game.draw_text("Play Again?", 20, self.mid_w, subtitle_y)
+            self.game.draw_text("Yes", 20, self.yesx, self.button_y)
+            self.game.draw_text("No", 20, self.nox, self.button_y)
+
+            self.draw_cursor()
+            self.blit_screen()
+
+    def check_input(self):
+        if self.game.LEFT_KEY or self.game.RIGHT_KEY:
+            self.game.nav_sound.play()
+
+            # toggle selection
+            self.state = 'No' if self.state == 'Yes' else 'Yes'
+            x = self.yesx if self.state == 'Yes' else self.nox
+
+            self.cursor_rectangle.midtop = (
+                x + self.cursor_offset_x,
+                self.yesy
+            )
+
+        if self.game.START_KEY:
+            self.game.select_sound.play()
+
+            if self.state == 'Yes':
+                self.game.next_action = 'Start'
+            else:
+                self.game.current_menu = self.game.main_menu
+
+            self.run_display = False
+
+
+class VictoryMenu(GameOverMenu):
+    def display_menu(self):
+        self.run_display = True
+
+        # cursor starts on "Yes"
+        self.cursor_rectangle.midtop = (
+            self.yesx + self.cursor_offset_x,
+            self.yesy
+        )
+
+        while self.run_display:
+            self.game.check_events()
+            self.check_input()
+            self.game.display.fill(self.game.black)
+
+            title_y = self.mid_h - 80
+            subtitle_y = self.mid_h - 40
+
+            self.game.draw_text("VICTORY!", 32, self.mid_w, title_y)
+            self.game.draw_text("Play Again?", 20, self.mid_w, subtitle_y)
+            self.game.draw_text("Yes", 20, self.yesx, self.button_y)
+            self.game.draw_text("No", 20, self.nox, self.button_y)
+
+            self.draw_cursor()
+            self.blit_screen()
 # class PauseMenu(Menu):
 #     def __init__(self, game):
 #         Menu.__init__(self, game)
