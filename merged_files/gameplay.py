@@ -543,13 +543,20 @@ class Door(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, TILE=32):
         super().__init__()
         self.image = pygame.Surface((w, h))
-        self.image.fill((100, 100, 100))
-        self.rect = self.image.get_rect(topleft=(x, y))
+        self.rect = self.image.get_rect(bottomleft=(x, y))
         self.x = x
         self.y = y
 
         self.opened = True
         self.timer = -1
+
+        # set initial visible appearance according to open state
+        if self.opened:
+            self.image = pygame.Surface((w, h), pygame.SRCALPHA)
+            self.image.fill((0, 0, 0, 0))
+        else:
+            self.image = pygame.Surface((w, h), pygame.SRCALPHA)
+            self.image.fill((100, 100, 100))
         
 
         # compute covered tiles
@@ -568,11 +575,14 @@ class Door(pygame.sprite.Sprite):
 
     
     def close(self, blocked_tiles, walls):
-        if  self.opened:
+        if self.opened:
             for tile in self.tiles:
                 blocked_tiles.add(tile)
             for sprite in self.wall_sprites:
                 walls.add(sprite)
+            # make door visible (solid grey) when closed
+            self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+            self.image.fill((100, 100, 100))
             self.opened = False
 
     def open(self, blocked_tiles, walls):
@@ -581,6 +591,9 @@ class Door(pygame.sprite.Sprite):
             blocked_tiles.discard(tile)
         for sprite in self.wall_sprites:
             walls.remove(sprite)
+        # make door transparent when opened (passable)
+        self.image = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        self.image.fill((0, 0, 0, 0))
         self.opened = True
         self.timer = 0
 
@@ -821,17 +834,17 @@ def main(game):
     rooms = pygame.sprite.Group()
     Doors = pygame.sprite.Group()
     Projectile_group = pygame.sprite.Group()
-    door1room1 = Door(1346,1293,72,149)
-    door2room1 = Door(478,577,99,91)  
-    door1room2 = Door(1629,3555,100,88)
-    door2room2 = Door(766,3021,95,148) 
-    door1room3 = Door(3459,3597,89,146)
-    door2room3 = Door(3458,3787,89,152)
-    door1room4 = Door(3453,2085,100,73)
-    door2room4 = Door(3839,2110,98,50)
-    door1room5 = Door(3279,907,79,153)    
-    bossdoor = Door(2302,866,196,53)
-    finishline = Door(2302,48,196,53)
+    door1room1 = Door(1346,1442,72,149)
+    door2room1 = Door(478,668,99,91)  
+    door1room2 = Door(1629,3643,100,88)
+    door2room2 = Door(766,3169,95,148) 
+    door1room3 = Door(3459,3743,89,146)
+    door2room3 = Door(3458,3939,89,152)
+    door1room4 = Door(3453,2158,100,73)
+    door2room4 = Door(3839,2160,98,50)
+    door1room5 = Door(3279,1060,79,153)    
+    bossdoor = Door(2302,919,196,53)
+    finishline = Door(2302,101,196,53)
     
     door1 = [door1room1,door2room1]
     door2 = [door1room2,door2room2]
@@ -852,14 +865,16 @@ def main(game):
     Doors.add(door1room4)
     Doors.add(door2room4)
     Doors.add(door1room5)
-    # Make non-boss door images invisible 
-    # for d in Doors:
-    #     if d is bossdoor:
-    #         continue
-    #     if d is finishline:
-    #         continue
-    #     d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
-    #     d.image.fill((0, 0, 0, 0))
+    # Make non-boss door images invisible only if they're opened (passable)
+    for d in Doors:
+        if d is bossdoor or d is finishline:
+            continue
+        if getattr(d, 'opened', False):
+            d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
+            d.image.fill((0, 0, 0, 0))
+        else:
+            d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
+            d.image.fill((100, 100, 100))
     
     rooms.add(Room("room1_fix",477,671,880,880,door1))
     rooms.add(Room("room4_fix",3358,2157,675,720,door4))
@@ -1053,6 +1068,17 @@ def main(game):
         # Draw
         screen.fill((0, 0, 0))
         screen.blit(map_surface, (-camera.offset.x, -camera.offset.y))
+        #Draw spike decoration for non-boss doors (one spike frame per door tile)
+        # for d in Doors:
+        #     if d is bossdoor:
+        #         continue
+        #     if d is finishline:
+        #         continue
+        #     else:
+        #         px = d.x - camera.offset.x 
+        #         py = d.y - camera.offset.y 
+        #         spike_rect = spike_frames[0].get_rect(bottomleft=(px, py))
+        #         screen.blit(spike_frames[0], spike_rect)
         # Debug: draw collision tiles overlay
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y - camera.offset.y))
@@ -1061,16 +1087,7 @@ def main(game):
         camera.blit_group(screen,Doors)
         camera.blit_group(screen,Projectile_group)
 
-        # Draw spike decoration for non-boss doors (one spike frame per door tile)
-        # for d in Doors:
-        #     if d is bossdoor:
-        #         continue
-        #     if d is finishline:
-        #         continue
-        #     else:
-        #         px = d.x - camera.offset.x 
-        #         py = d.y - camera.offset.y + 50
-        #         screen.blit(spike_frames[0], (px, py))
+       
 
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
