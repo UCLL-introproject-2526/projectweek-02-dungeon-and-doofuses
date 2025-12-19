@@ -27,6 +27,9 @@ sfx_zwaard.set_volume(.1)
 sfx_punch = pygame.mixer.Sound('sounds\punch.ogg')
 sfx_punch.set_volume(.1)
 
+sfx_damage = pygame.mixer.Sound('sounds\damage.ogg')
+sfx_damage.set_volume(.2)
+
 channel0 = pygame.mixer.Channel(0)
 channel1 = pygame.mixer.Channel(1)
 channel2 = pygame.mixer.Channel(2)
