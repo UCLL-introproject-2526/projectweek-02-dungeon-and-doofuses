@@ -11,6 +11,7 @@ import math
 import heapq
 
 import sys
+from collections import deque
 
 from sound import sfx_zwaard, sfx_voetstappen, sfx_punch
 
@@ -140,6 +141,9 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, y))
         self.x = float(x)
         self.y = float(y)
+        # position history for jumping back multiple frames on collision
+        self.pos_history = deque(maxlen=3)
+        self.pos_history.append((self.x, self.y))
         self.speed = speed
         self.max_hp = max_hp
         self.hp = max_hp
@@ -803,6 +807,8 @@ def main(game):
             e.tick_path_cooldown()
             if player_moved_tile or e.path_cooldown == 0:
                 e.request_path(player.rect, blocked_tiles, grid_w, grid_h)
+            # save previous position to allow reverting on collision 
+            old_x, old_y = e.x, e.y
             if e.path:
                 e.move_along_path()
             else:
@@ -813,7 +819,28 @@ def main(game):
                     e.x += (dx_e / dist) * e.speed
                     e.y += (dy_e / dist) * e.speed
                     e.rect.center = (int(e.x), int(e.y))
+
+            # call update (this may apply knockback)d
             e.update(walls, world_rect)
+
+            # collision with walls, player, or other enemies -> revert to previous position and cancel knockback
+            collided = False
+            if pygame.sprite.spritecollideany(e, walls):
+                collided = True
+            elif e.rect.colliderect(player.rect):
+                collided = True
+            else:
+                for other in enemies:
+                    if other is e:
+                        continue
+                    if e.rect.colliderect(other.rect):
+                        collided = True
+                        break
+            if collided:
+                e.x, e.y = old_x, old_y
+                e.rect.center = (int(e.x), int(e.y))
+                e.kb_vx = 0.0
+                e.kb_vy = 0.0
 
         arrow  = pygame.sprite.spritecollideany(player, Projectile_group) 
         if arrow:
