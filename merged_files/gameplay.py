@@ -642,7 +642,7 @@ def pause_game(screen, clock, game):
         for event in pygame.event.get():
             if menu_state == 'Volume':
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_s and game.volume > 0:
+                    if event.key == pygame.K_q and game.volume > 0:
                         game.nav_sound.play()
                         game.volume -= 1
                         game.update_sound_volume()
