@@ -12,7 +12,7 @@ import heapq
 
 import sys
 
-from sound import sfx_zwaard, sfx_voetstappen, sfx_punch, sfx_damage, channel1, channel2, channel3, channel4
+from sound import sfx_zwaard, sfx_voetstappen, sfx_punch, channel1, channel2, channel3, channel4
 
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1000, 600    # window size
@@ -475,7 +475,7 @@ class Projectile(pygame.sprite.Sprite):
         super().__init__()
         
         self.set_sprite(
-            "Assets\img\\arrow basic.pngs",
+            "Assets/img/arrow basic.pngs",
             frame_rect=(0, 0, 240, 240),
             scale=0.1
         )
