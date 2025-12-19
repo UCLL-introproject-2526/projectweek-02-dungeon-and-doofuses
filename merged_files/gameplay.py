@@ -12,7 +12,7 @@ import heapq
 
 import sys
 
-from sound import sfx_zwaard, sfx_voetstappen, sfx_punch, channel1, channel2, channel3, channel4
+from sound import sfx_zwaard, sfx_voetstappen, sfx_punch, sfx_damage, channel1, channel2, channel3, channel4
 
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1000, 600    # window size
@@ -485,8 +485,9 @@ class charger(Enemy):
     def __init__(self, x, y, speed, damage, hp=3):
         # We zetten speed op 0 in de super, omdat we zijn beweging zelf regelen
         super().__init__(x, y, speed, damage, hp )
+
         self.set_sprite(
-            "Assets\img\Vamp lord basic Big.png",
+            "Assets\img\slime basic.png",
             frame_rect=(0, 0, 320, 320),
             scale=0.1
         )
@@ -533,15 +534,6 @@ class charger(Enemy):
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy, speed=3, damage=1):
         super().__init__()
-<<<<<<< HEAD
-        
-        self.set_sprite(
-            "Assets/img/arrow basic.pngs",
-            frame_rect=(0, 0, 240, 240),
-            scale=0.1
-        )
-=======
->>>>>>> e7e1e26261712b6509a2c42ea32300dde6fbc362
 
         self.x = float(x)
         self.y = float(y)
@@ -903,7 +895,7 @@ def main(game):
     pygame.mixer.init()
     pygame.mixer.music.load('sounds\muziek.ogg')
     pygame.mixer.music.play(loops=-1)
-    pygame.mixer.music.set_volume(.3)
+    pygame.mixer.music.set_volume(.2)
 
     # Player start: first free tile near top-left
     start_tx, start_ty = 70,70
