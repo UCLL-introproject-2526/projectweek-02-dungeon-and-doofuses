@@ -245,7 +245,12 @@ class CreditsMenu(Menu):
                 self.run_display = False
             self.game.display.fill(self.game.black)
             self.game.draw_text('Credits', 20, self.game.display_w/2, self.game.display_h/2 - 20)
-            self.game.draw_text('Made by Dungeon and Doofuses', 15, self.game.display_w/2, self.game.display_h/2 + 10)
+            self.game.draw_text('Made by Dungeon and Doofuses', 15, self.game.display_w/2, self.game.display_h/2 + 20)
+            self.game.draw_text('bas vannieuwenborgh', 15, self.game.display_w/2, self.game.display_h/2 + 40)
+            self.game.draw_text('Rik Indigne', 15, self.game.display_w/2, self.game.display_h/2 + 60)
+            self.game.draw_text('Viktor Heijlen', 15, self.game.display_w/2, self.game.display_h/2 + 80)
+            self.game.draw_text('zeeshan Mahar', 15, self.game.display_w/2, self.game.display_h/2 + 100)
+            self.game.draw_text('Thian Penen', 15, self.game.display_w/2, self.game.display_h/2 + 120)
             self.blit_screen()
 
 class GameOverMenu(Menu):
@@ -283,7 +288,7 @@ class GameOverMenu(Menu):
             subtitle_y = self.mid_h - 40
 
             self.game.draw_text("GAME OVER", 32, self.mid_w, title_y)
-            self.game.draw_text("Play Again?", 20, self.mid_w, subtitle_y)
+            self.game.draw_text("Play Again", 20, self.mid_w, subtitle_y)
             self.game.draw_text("Yes", 20, self.yesx, self.button_y)
             self.game.draw_text("No", 20, self.nox, self.button_y)
 
@@ -332,8 +337,8 @@ class VictoryMenu(GameOverMenu):
             title_y = self.mid_h - 80
             subtitle_y = self.mid_h - 40
 
-            self.game.draw_text("VICTORY!", 32, self.mid_w, title_y)
-            self.game.draw_text("Play Again?", 20, self.mid_w, subtitle_y)
+            self.game.draw_text("VICTORY", 32, self.mid_w, title_y)
+            self.game.draw_text("Play Again", 20, self.mid_w, subtitle_y)
             self.game.draw_text("Yes", 20, self.yesx, self.button_y)
             self.game.draw_text("No", 20, self.nox, self.button_y)
 
