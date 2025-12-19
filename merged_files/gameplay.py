@@ -563,22 +563,9 @@ class Projectile(pygame.sprite.Sprite):
         self.damage = damage
         self.life = 180  # frames
 
-        # Create sprite first so we can measure projectile size
-        self.set_sprite(
-            "Assets\img\\arrow basic.pngs",
-            frame_rect=(0, 0, 240, 240),
-            scale=0.1
-        )
-
-        # Place the projectile just outside the shooter to avoid immediate collision.
-        # Formula: half_projectile + small_margin. If you know the shooter's radius,
-        # use (half_shooter + half_projectile + margin) instead.
-        proj_radius = max(self.image.get_width(), self.image.get_height()) // 2
-        margin = 6
-        offset = proj_radius + margin
-        self.x += self.dx * offset
-        self.y += self.dy * offset
-        self.rect.center = (int(self.x), int(self.y))
+        self.image = pygame.Surface((6, 6))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect(center=(x, y))
 
     def update(self, walls):
         self.x += self.dx * self.speed
@@ -999,7 +986,7 @@ def main(game):
     rooms.add(Room("room5_fix",3359,333,865,818,door5,[4]))
     rooms.add(Room("room2_fix",863,2829,960,723,door2,[5]))
     rooms.add(Room("room3_fix",3551,3500,769,629,door3,[6]))
-    rooms.add(Room("boss",1631,45,1538,819,door_boss,[4,4]))
+    rooms.add(Room("boss",1631,45,1538,819,door_boss,[4,3,2,5,6,7]))
     # Combat state
     attacking = False
     attack_timer = 0
@@ -1156,6 +1143,7 @@ def main(game):
         if arrow:
             player.take_damage(arrow.give_damage())
             arrow.kill()
+        for projectile in list(Projectile_group):projectile.update(walls)
 
         mon = pygame.sprite.spritecollideany( player, enemies)
         if mon: player.take_damage(mon.give_damage())
