@@ -12,7 +12,7 @@ import heapq
 
 import sys
 
-from sound import sfx_zwaard, sfx_voetstappen, sfx_punch
+from sound import sfx_zwaard, sfx_voetstappen, sfx_punch, sfx_damage, channel1, channel2, channel3, channel4
 
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1000, 600    # window size
@@ -184,6 +184,20 @@ class Player(pygame.sprite.Sprite):
 
     def process_event(self, event):
         """Call from the main event loop to track KEYDOWN/KEYUP state for smooth movement."""
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_q]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+        if keys[pygame.K_s]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+        if keys[pygame.K_d]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+        if keys[pygame.K_z]:
+            if channel2.get_busy() == False:
+                channel2.play(sfx_voetstappen)
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_q:
                 self.move_left = True
@@ -232,6 +246,7 @@ class Player(pygame.sprite.Sprite):
             self.hp -= amount
             self.vincible = True
             self.last_hit = current_time
+            channel4.play(sfx_damage)
         if self.hp <= 0: self.die()
 
     def die(self):
@@ -261,10 +276,12 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, walls, world_rect):
         if self.invul > 0:
+            self.invul -= 1
             self.image = self.base_image.copy()
             self.image.fill((255, 80, 80), special_flags=pygame.BLEND_RGBA_ADD)
         else:
             self.image = self.base_image.copy()
+
         if abs(self.kb_vx) > 0.01 or abs(self.kb_vy) > 0.01:
             self.x += self.kb_vx
             self.y += self.kb_vy
@@ -375,12 +392,12 @@ class vampireLord(Enemy):
 
         self.set_sprite(
             "Assets\img\Vamp lord basic Big.png",
-            frame_rect=(0, 0, 320, 320),
+            frame_rect=(0, 0, 640, 640),
             scale=0.1
         )
 
-    def update(self,walls):
-        super().update(walls)
+    def update(self,walls,world_rect):
+        super().update(walls,world_rect)
         events = []
         self.spawn_cooldown -=1
         if self.spawn_cooldown == 0:
@@ -394,7 +411,7 @@ class Boss(Enemy):
 
         self.set_sprite(
             "Assets\img\Minotaur Basic.png",
-            frame_rect=(0, 0, 320, 320),
+            frame_rect=(0, 0, 960, 960),
             scale=0.1
         )
 
@@ -449,7 +466,7 @@ class Tank(Enemy):
 
         self.set_sprite(
             "Assets\img\Brute basic.png",
-            frame_rect=(0, 0, 320, 320),
+            frame_rect=(0, 0, 640, 640),
             scale=0.1
         ) 
     
@@ -458,8 +475,8 @@ class Projectile(pygame.sprite.Sprite):
         super().__init__()
         
         self.set_sprite(
-            "Assets\img\arrow basic.pngs",
-            frame_rect=(0, 0, 320, 320),
+            "Assets\img\\arrow basic.pngs",
+            frame_rect=(0, 0, 240, 240),
             scale=0.1
         )
 
@@ -488,12 +505,16 @@ class Projectile(pygame.sprite.Sprite):
 class RangedEnemy(Enemy):
     def __init__(self, x, y, speed, hp=3):
         super().__init__(x, y, speed, hp)
-        self.image.fill((255, 100, 0))
-        self.shooting_range = TILE * 5
         self.shooting_cooldown = 120
+        
+        self.set_sprite(
+            "Assets\img\\ranger basic.png",
+            frame_rect=(0, 0, 480, 480),
+            scale=0.1
+        )
 
-    def update(self, walls):
-        super().update(walls)
+    def update(self, walls, world_rect):
+        super().update(walls, world_rect)
         events = []
         self.shooting_cooldown -= 1
         if self.shooting_cooldown == 0:
@@ -989,8 +1010,8 @@ def main(game):
             dir_x = world_mx - player.rect.centerx
             dir_y = world_my - player.rect.centery
             length_dir = math.hypot(dir_x, dir_y)
-            if pygame.mixer.get_busy() == False:
-               sfx_zwaard.play()
+            if channel1.get_busy() == False:
+               channel1.play(sfx_zwaard)
             if length_dir != 0:
                 dir_x /= length_dir
                 dir_y /= length_dir
@@ -1005,7 +1026,8 @@ def main(game):
                         kb_dx = e.rect.centerx - player.rect.centerx
                         kb_dy = e.rect.centery - player.rect.centery
                         kb_len = math.hypot(kb_dx, kb_dy)
-                        sfx_punch.play() 
+                        if channel3.get_busy() == False:
+                            channel3.play(sfx_punch)
                         if kb_len == 0:
                             kb_dx, kb_dy = 0.0, -1.0
                             kb_len = 1.0
@@ -1052,7 +1074,7 @@ def main(game):
                 for location in locations:
                     ex,ey = location
                     # enemies.add(Enemy(ex,ey,2,1))
-                    enemies.add(FastEnemy(ex,ey,2,1)) #debugging enemies
+                    enemies.add(RangedEnemy(ex,ey,2,1)) #debugging enemies
         
         if current_room and current_room.count == 1 and len(enemies) == 0:
             # Only increment once when the room is first cleared
