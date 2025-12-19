@@ -9,7 +9,7 @@ import pygame
 import random
 import math
 import heapq
-from menu_game import *
+
 import sys
 
 # ---------------------- CONFIG ----------------------
@@ -143,6 +143,8 @@ class Player(pygame.sprite.Sprite):
         self.hp = max_hp
         self.cooldown_timer = 0
         self.COOLDOWN = cooldown
+        self.invincibility_duration = 1000
+        self.vincible = False
 
     def handle_input(self):
         keys = pygame.key.get_pressed()
@@ -172,9 +174,24 @@ class Player(pygame.sprite.Sprite):
         self.move(dx, dy, walls)
         self.rect.clamp_ip(world_rect)
         self.x, self.y = float(self.rect.left), float(self.rect.top)
+        if self.vincible:
+            if pygame.time.get_ticks() - self.last_hit > self.invincibility_duration:
+                self.vincible = False
+
+    def take_damage(self, amount):
+        current_time = pygame.time.get_ticks()
+        if not self.vincible:
+            self.hp -= amount
+            self.vincible = True
+            self.last_hit = current_time
+        if self.hp <= 0: self.die()
+
+    def die(self):
+        print("Speler is verslagen!")
+        self.kill() # Verwijdert de speler uit alle groepen
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed, hp=2):
+    def __init__(self, x, y, speed, damage, hp=2):
         super().__init__()
         self.image = pygame.Surface([20, 20])
         self.image.fill((0, 255, 0))
@@ -190,6 +207,10 @@ class Enemy(pygame.sprite.Sprite):
         self.path_index = 0
         self.path_cooldown = 0
         self.last_player_tile = None
+        self.damage = damage
+
+    def give_damage(self):
+        return self.damage
 
     def update(self, walls, world_rect):
         if self.invul > 0:
@@ -271,6 +292,129 @@ class Enemy(pygame.sprite.Sprite):
         self.kb_vy += kb_y
         return self.hp <= 0
 
+class FastEnemy(Enemy):
+    def __init__(self, x, y,speed,damage, hp=1, size=15):
+        super().__init__(x, y, speed,damage, hp, size)
+        self.speed *= 1.5
+        self.image.fill((0, 0, 255))
+
+    def give_damage(self):
+        return self.damage
+    
+class vampireLord(Enemy):
+    def __init__(self, x, y, speed, damage, hp=2,size = 20):
+        super().__init__(x,y,speed, damage,hp,size)
+        self.spawn_cooldown = 180
+
+    def update(self,walls):
+        super().update(walls)
+        events = []
+        self.spawn_cooldown -=1
+        if self.spawn_cooldown == 0:
+            events.append(("vampire", self.x,self.y, self.speed))
+            self.spawn_cooldown = 180
+        return events
+
+class Boss(Enemy):
+    def __init__(self, x, y, speed, damage, hp, size):
+        super().__init__(x, y, speed, damage, hp, size)
+        self.charge_allowed = False
+        self.aoe_cooldown = 180  # frames tussen AoE
+        self.charge_cooldown = 240  # frames tussen charges
+        self.aoe_radius = 80
+        self.aoe_timer = 0
+        self.charge_timer = 0
+        self.charging = False
+        self.charge_speed = 6.0
+        self.charge_dx = 0
+        self.charge_dy = 0
+
+
+    def area_of_effect(self, player):
+        if self.aoe_cooldown > 0:
+            return
+        dx = player.rect.centerx - self.x
+        dy = player.rect.centery - self.y
+        dist = math.hypot(dx, dy)
+        if dist <= self.aoe_radius:
+              # schade + knockback
+            kb_x = dx / dist if dist != 0 else 0
+            kb_y = dy / dist if dist != 0 else -1
+            player.take_damage(self.damage)
+            player.x += kb_x * 10
+            player.y += kb_y * 10
+            player.rect.center = (int(player.x), int(player.y))
+            print("Boss AoE hits player!")
+        self.aoe_timer = self.aoe_cooldown
+
+    def charge(self, player):
+        target_x,target_y = player.rect.center
+        dx = target_x - self.x
+        dy = target_y - self.y
+        distance = math.hypot(dx,dy)
+        if distance == 0: return
+        dx = dx/distance
+        dy = dy/distance
+        self.charge_dx = (dx / distance) * self.charge_speed
+        self.charge_dy = (dy / distance) * self.charge_speed
+        self.charging = True
+        self.charge_timer = self.charge_cooldown
+        print("Boss starts charging!") 
+
+
+
+class Tank(Enemy):
+    def __init__(self, x, y, speed,damage, hp=5, size=40):
+        super().__init__(x, y, speed,damage, hp, size)
+           
+    
+class Projectile(pygame.sprite.Sprite):
+    def __init__(self, x, y, dx, dy, speed=3, damage=1):
+        super().__init__()
+        self.image = pygame.Surface((6, 6))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect(center=(x, y))
+
+        self.x = float(x)
+        self.y = float(y)
+        self.dx = dx
+        self.dy = dy
+        self.speed = speed
+        self.damage = damage
+        self.life = 180  # frames
+
+    def update(self, walls):
+        self.x += self.dx * self.speed
+        self.y += self.dy * self.speed
+        self.rect.center = (int(self.x), int(self.y))
+
+        self.life -= 1
+        if self.life <= 0:
+            self.kill()
+        if pygame.sprite.spritecollideany(self, walls):
+            self.kill()
+    
+    def give_damage(self):
+        return self.damage
+
+class RangedEnemy(Enemy):
+    def __init__(self, x, y, speed, hp=3, size=20):
+        super().__init__(x, y, speed, hp, size)
+        self.image.fill((255, 100, 0))
+        self.shooting_range = TILE * 5
+        self.shooting_cooldown = 120
+
+    def update(self, walls):
+        super().update(walls)
+        events = []
+        self.shooting_cooldown -= 1
+        if self.shooting_cooldown == 0:
+            events.append(("shoot",self.x,self.y ))
+            self.shooting_cooldown = 180
+        return events
+    
+    def give_damage(self):
+        return 1
 class Wall(pygame.sprite.Sprite):
     def __init__(self, rect):
         super().__init__()
@@ -393,6 +537,7 @@ def pause_game(screen, clock, game):
     pygame.init()
     paused = True
     font = pygame.font.Font('Assets\8-BIT WONDER.TTF', 30)
+    menu_state = 'Main'
 
     options = ['Resume', 'Volume', 'Quit']
     state_index = 0
@@ -404,6 +549,22 @@ def pause_game(screen, clock, game):
         clock.tick(60)
 
         for event in pygame.event.get():
+            if menu_state == 'Volume':
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT and game.volume > 0:
+                        game.nav_sound.play()
+                        game.volume -= 1
+                        game.update_sound_volume()
+
+                    elif event.key == pygame.K_RIGHT and game.volume < 10:
+                        game.nav_sound.play()
+                        game.volume += 1
+                        game.update_sound_volume()
+
+                    elif event.key == pygame.K_BACKSPACE or event.key == pygame.K_ESCAPE:
+                        game.goback_sound.play()
+                        menu_state = 'Main'
+
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -426,7 +587,7 @@ def pause_game(screen, clock, game):
                     if choice == 'Resume':
                         return 'Resume'
                     elif choice == 'Volume':
-                        pass
+                        menu_state = 'Volume'
                     elif choice == 'Quit':
                         return 'Quit'
 
@@ -435,21 +596,31 @@ def pause_game(screen, clock, game):
         overlay.fill((0, 0, 0))
         screen.blit(overlay, (0, 0))
 
-        text = font.render('Paused', True, (255, 255, 255))
-        rect = text.get_rect(center = (mid_w, mid_h - 60))
-        screen.blit(text, rect)
+        if menu_state == 'Main':
+            text = font.render('Paused', True, (255, 255, 255))
+            rect = text.get_rect(center = (mid_w, mid_h - 60))
+            screen.blit(text, rect)
 
-        for i, option in enumerate(options):
-            color = (255, 255, 255)
-            text_surface = font.render(option, True, color)
-            text_rectangle = text_surface.get_rect(center = (mid_w, mid_h + i * 40))
-            screen.blit(text_surface, text_rectangle)
+            for i, option in enumerate(options):
+                color = (255, 255, 255)
+                text_surface = font.render(option, True, color)
+                text_rectangle = text_surface.get_rect(center = (mid_w, mid_h + i * 40))
+                screen.blit(text_surface, text_rectangle)
 
-        cursor_x = mid_w + offset
-        cursor_y = mid_h + state_index * 37
-        pygame.draw.polygon(screen, (255, 255, 255), [(cursor_x, cursor_y), (cursor_x + 15, cursor_y + 10), (cursor_x, cursor_y + 20)])
+            cursor_x = mid_w + offset
+            cursor_y = mid_h + state_index * 37
+            pygame.draw.polygon(screen, (255, 255, 255), [(cursor_x, cursor_y), (cursor_x + 15, cursor_y + 10), (cursor_x, cursor_y + 20)])
+
+        elif menu_state == 'Volume':
+            title = font.render('Volume', True, (255, 255, 255))
+            value = font.render(f'{game.volume} / 10', True, (255, 255, 255))
+
+            screen.blit(title, title.get_rect(center=(mid_w, mid_h - 40)))
+            screen.blit(value, value.get_rect(center=(mid_w, mid_h + 10)))
 
         pygame.display.flip()
+    
+    return 'Resume'
 
 
 def main(game):
@@ -497,6 +668,7 @@ def main(game):
     enemies = pygame.sprite.Group()
     rooms = pygame.sprite.Group()
     Doors = pygame.sprite.Group()
+    Projectile_group = pygame.sprite.Group()
     door1room1 = Door(1346,1293,72,149)
     door2room1 = Door(478,577,99,91)  
     door1room2 = Door(1629,3555,100,88)
@@ -597,6 +769,13 @@ def main(game):
                     e.rect.center = (int(e.x), int(e.y))
             e.update(walls, world_rect)
 
+        arrow  = pygame.sprite.spritecollideany(player, Projectile_group) 
+        if arrow:
+            player.take_damage(arrow.give_damage())
+            arrow.kill()
+
+        mon = pygame.sprite.spritecollideany( player, enemies)
+        if mon: player.take_damage(mon.give_damage())
         sword_hitbox = None
         if attacking:
             mx, my = pygame.mouse.get_pos()
@@ -672,6 +851,7 @@ def main(game):
         camera.blit_group(screen, enemies)
         camera.blit_group(screen, player_group)
         camera.blit_group(screen,Doors)
+        camera.blit_group(screen,Projectile_group)
 
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
