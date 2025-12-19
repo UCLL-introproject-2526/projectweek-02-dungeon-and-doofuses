@@ -695,27 +695,28 @@ def pause_game(screen, clock, game):
                 pygame.quit()
                 sys.exit()
             
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    paused = False
+            elif menu_state == 'Main':
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        paused = False
 
-                elif event.key == pygame.K_z:
-                    state_index = (state_index - 1) % len(options)
-                    game.nav_sound.play()
+                    elif event.key == pygame.K_z:
+                        state_index = (state_index - 1) % len(options)
+                        game.nav_sound.play()
 
-                elif event.key == pygame.K_s:
-                    state_index = (state_index + 1) % len(options)
-                    game.nav_sound.play()
+                    elif event.key == pygame.K_s:
+                        state_index = (state_index + 1) % len(options)
+                        game.nav_sound.play()
 
-                elif event.key == pygame.K_RETURN:
-                    game.select_sound.play()
-                    choice = options[state_index]
-                    if choice == 'Resume':
-                        return 'Resume'
-                    elif choice == 'Volume':
-                        menu_state = 'Volume'
-                    elif choice == 'Quit':
-                        return 'Quit'
+                    elif event.key == pygame.K_RETURN:
+                        game.select_sound.play()
+                        choice = options[state_index]
+                        if choice == 'Resume':
+                            return 'Resume'
+                        elif choice == 'Volume':
+                            menu_state = 'Volume'
+                        elif choice == 'Quit':
+                            return 'Quit'
 
         overlay = pygame.Surface((1000, 600))
         overlay.set_alpha(150)
