@@ -672,6 +672,40 @@ def main(game):
     SWORD_IMG = pygame.image.load("Assets\img\Sword.png").convert_alpha()
     SWORD_IMG = pygame.transform.scale_by(SWORD_IMG, 0.1)  # scale sword
 
+    # Load key sprite sheet (try several common paths). If not found, fallback to None.
+    key_sheet = None
+    key_sheet = pygame.image.load(str('Assets\img\key.png')).convert_alpha()
+    key_frames = []
+    KEY_ANIM_SPEED = 8  # frames per sprite frame
+    KEY_SCALE = 0.1     # render key much smaller
+    key_frame_index = 0
+    key_anim_counter = 0
+    if key_sheet:
+        kw, kh = key_sheet.get_size()
+        # assume vertical strip of square frames
+        if kh >= kw and kw > 0:
+            n = kh // kw
+            for i in range(n):
+                frame = key_sheet.subsurface(pygame.Rect(0, i * kw, kw, kw)).copy()
+                try:
+                    frame = pygame.transform.scale_by(frame, KEY_SCALE)
+                except Exception:
+                    frame = pygame.transform.scale(frame, (int(frame.get_width() * KEY_SCALE), int(frame.get_height() * KEY_SCALE)))
+                key_frames.append(frame)
+        else:
+            # single frame
+            try:
+                frame = pygame.transform.scale_by(key_sheet, KEY_SCALE)
+            except Exception:
+                frame = pygame.transform.scale(key_sheet, (int(key_sheet.get_width() * KEY_SCALE), int(key_sheet.get_height() * KEY_SCALE)))
+            key_frames.append(frame)
+
+    # Font for HUD (8-BIT WONDER)
+    try:
+        HUD_FONT = pygame.font.Font(str(Path('Assets') / '8-BIT WONDER.TTF'), 20)
+    except Exception:
+        HUD_FONT = pygame.font.SysFont(None, 20)
+
     # Load map image (Path -> str)
     map_surface = pygame.image.load(str('Assets\img\map.png')).convert()
     # scale pixel art (x2)
@@ -707,6 +741,9 @@ def main(game):
     start_y = start_ty * TILE + TILE // 4
     player = Player(start_x, start_y)
     player_group = pygame.sprite.GroupSingle(player)
+
+    # keys collected by clearing rooms (don't count boss room)
+    current_keys = 0
 
    # make rooms and doors
     enemies = pygame.sprite.Group()
@@ -761,6 +798,7 @@ def main(game):
     # Track player's tile for path recompute
     player_tile = (player.rect.centerx // TILE, player.rect.centery // TILE)
     current_room = None
+    
 
     run = True
     paused = False
@@ -912,6 +950,11 @@ def main(game):
                     enemies.add(Enemy(ex,ey,2,1))
         
         if current_room and current_room.count == 1 and len(enemies) == 0:
+            # Only increment once when the room is first cleared
+            if not current_room.cleared:
+                if current_room.id != 'boss':
+                    current_keys += 1
+                current_room.cleared = True
             current_room.unlock(blocked_tiles,walls)
 
         # Draw
@@ -966,6 +1009,28 @@ def main(game):
         #     pygame.draw.rect(screen, (200, 50, 50), (bar_x, bar_y, int(bar_w * (1 - frac)), bar_h))
         # else:
         #     pygame.draw.rect(screen, (50, 200, 50), (bar_x, bar_y, bar_w, bar_h))
+
+        # Draw keys HUD (bottom-left) — only during gameplay (pause uses its own menu)
+        if key_frames:
+            key_anim_counter += 1
+            if key_anim_counter >= KEY_ANIM_SPEED:
+                key_anim_counter = 0
+                key_frame_index = (key_frame_index + 1) % len(key_frames)
+            key_img = key_frames[key_frame_index]
+            k_w, k_h = key_img.get_size()
+            hud_x = 8
+            hud_y = screen.get_height() - k_h - 8
+            screen.blit(key_img, (hud_x, hud_y))
+            # render number next to key
+            txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
+            screen.blit(txt, (hud_x + k_w + 6, hud_y + (k_h - txt.get_height()) // 2))
+        else:
+            # fallback: draw a simple yellow key rectangle and number
+            hud_x = 8
+            hud_y = screen.get_height() - 16 - 8
+            pygame.draw.rect(screen, (220, 200, 20), (hud_x, hud_y, 16, 8))
+            txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
+            screen.blit(txt, (hud_x + 22, hud_y - 2))
 
         pygame.display.flip()
 
