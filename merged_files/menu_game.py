@@ -71,13 +71,13 @@ class Game():
                     self.START_KEY = True
                 if event.key == pygame.K_BACKSPACE:
                     self.BACK_KEY = True
-                if event.key == pygame.K_DOWN:
+                if event.key == pygame.K_s:
                     self.DOWN_KEY = True
-                if event.key == pygame.K_UP:
+                if event.key == pygame.K_z:
                     self.UP_KEY = True
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_q:
                     self.LEFT_KEY = True
-                if event.key == pygame.K_RIGHT:
+                if event.key == pygame.K_d:
                     self.RIGHT_KEY = True
                 if event.key == pygame.K_ESCAPE:
                     if self.playing:

@@ -12,6 +12,8 @@ import heapq
 
 import sys
 
+from sound import sfx_zwaard, sfx_voetstappen, sfx_punch
+
 # ---------------------- CONFIG ----------------------
 SCREEN_W, SCREEN_H = 1000, 600    # window size
 TILE = 32                        # tile size for pathfinding grid
@@ -128,6 +130,15 @@ def astar(start, goal, blocked, grid_w, grid_h):
     return []
 
 # ---------------------- SPRITES ----------------------
+class SpriteSheet:
+    def __init__(self, path):
+        self.sheet = pygame.image.load(path).convert_alpha()
+
+    def get_frame(self, x, y, w, h):
+        frame = pygame.Surface((w, h), pygame.SRCALPHA)
+        frame.blit(self.sheet, (0, 0), (x, y, w, h))
+        return frame
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, speed=5, max_hp=10, cooldown=4):
         super().__init__()
@@ -145,15 +156,52 @@ class Player(pygame.sprite.Sprite):
         self.COOLDOWN = cooldown
         self.invincibility_duration = 1000
         self.vincible = False
+        # movement key state for KEYDOWN/KEYUP handling
+        self.move_left = False
+        self.move_right = False
+        self.move_up = False
+        self.move_down = False
+        self.moving = False  # last-frame moving state (for footstep sound)
 
     def handle_input(self):
-        keys = pygame.key.get_pressed()
+        # Compute movement from stored key state (set by process_event)
         dx, dy = 0, 0
-        if keys[pygame.K_q]: dx -= self.speed
-        if keys[pygame.K_d]: dx += self.speed
-        if keys[pygame.K_z]: dy -= self.speed
-        if keys[pygame.K_s]: dy += self.speed
+        if self.move_left:
+            dx -= self.speed
+        if self.move_right:
+            dx += self.speed
+        if self.move_up:
+            dy -= self.speed
+        if self.move_down:
+            dy += self.speed
+
+        moving_now = (dx != 0 or dy != 0)
+        # Play footsteps only when movement starts
+        if moving_now and not self.moving and not pygame.mixer.get_busy():
+            sfx_voetstappen.play()
+        self.moving = moving_now
         return dx, dy
+
+    def process_event(self, event):
+        """Call from the main event loop to track KEYDOWN/KEYUP state for smooth movement."""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                self.move_left = True
+            elif event.key == pygame.K_d:
+                self.move_right = True
+            elif event.key == pygame.K_z:
+                self.move_up = True
+            elif event.key == pygame.K_s:
+                self.move_down = True
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_q:
+                self.move_left = False
+            elif event.key == pygame.K_d:
+                self.move_right = False
+            elif event.key == pygame.K_z:
+                self.move_up = False
+            elif event.key == pygame.K_s:
+                self.move_down = False
 
     def move(self, dx, dy, walls):
         self.x += dx
@@ -193,8 +241,7 @@ class Player(pygame.sprite.Sprite):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, damage, hp=2):
         super().__init__()
-        self.image = pygame.Surface([20, 20])
-        self.image.fill((0, 255, 0))
+        self.image = pygame.Surface((20, 20), pygame.SRCALPHA)  # placeholder
         self.rect = self.image.get_rect(center=(x, y))
         self.x = float(x)
         self.y = float(y)
@@ -214,10 +261,10 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, walls, world_rect):
         if self.invul > 0:
-            self.invul -= 1
-            self.image.fill((200, 120, 120))
+            self.image = self.base_image.copy()
+            self.image.fill((255, 80, 80), special_flags=pygame.BLEND_RGBA_ADD)
         else:
-            self.image.fill((0, 255, 0))
+            self.image = self.base_image.copy()
         if abs(self.kb_vx) > 0.01 or abs(self.kb_vy) > 0.01:
             self.x += self.kb_vx
             self.y += self.kb_vy
@@ -291,20 +338,46 @@ class Enemy(pygame.sprite.Sprite):
         self.kb_vx += kb_x
         self.kb_vy += kb_y
         return self.hp <= 0
+    
+    def set_sprite(self, sheet_path, frame_rect, scale=1.0):
+
+        sheet = SpriteSheet(str(sheet_path))
+        image = sheet.get_frame(*frame_rect)
+
+        if scale != 1.0:
+            image = pygame.transform.scale_by(image, scale)
+
+        self.base_image = image          
+        self.image = image.copy()
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+
 
 class FastEnemy(Enemy):
-    def __init__(self, x, y,speed,damage, hp=1, size=15):
-        super().__init__(x, y, speed,damage, hp, size)
+    def __init__(self, x, y,speed,damage, hp=1):
+        super().__init__(x, y, speed,damage, hp)
+
+        self.set_sprite(
+            "Assets\img\Bat basic.png",
+            frame_rect=(0, 0, 320, 320),
+            scale=0.1
+        )
+
         self.speed *= 1.5
-        self.image.fill((0, 0, 255))
+        # self.image.fill((0, 0, 255))
 
     def give_damage(self):
         return self.damage
     
 class vampireLord(Enemy):
-    def __init__(self, x, y, speed, damage, hp=2,size = 20):
-        super().__init__(x,y,speed, damage,hp,size)
+    def __init__(self, x, y, speed, damage, hp=2):
+        super().__init__(x,y,speed, damage,hp)
         self.spawn_cooldown = 180
+
+        self.set_sprite(
+            "Assets\img\Vamp lord basic Big.png",
+            frame_rect=(0, 0, 320, 320),
+            scale=0.1
+        )
 
     def update(self,walls):
         super().update(walls)
@@ -316,8 +389,15 @@ class vampireLord(Enemy):
         return events
 
 class Boss(Enemy):
-    def __init__(self, x, y, speed, damage, hp, size):
-        super().__init__(x, y, speed, damage, hp, size)
+    def __init__(self, x, y, speed, damage, hp):
+        super().__init__(x, y, speed, damage, hp)
+
+        self.set_sprite(
+            "Assets\img\Minotaur Basic.png",
+            frame_rect=(0, 0, 320, 320),
+            scale=0.1
+        )
+
         self.charge_allowed = False
         self.aoe_cooldown = 180  # frames tussen AoE
         self.charge_cooldown = 240  # frames tussen charges
@@ -364,16 +444,24 @@ class Boss(Enemy):
 
 
 class Tank(Enemy):
-    def __init__(self, x, y, speed,damage, hp=5, size=40):
-        super().__init__(x, y, speed,damage, hp, size)
-           
+    def __init__(self, x, y, speed,damage, hp=5):
+        super().__init__(x, y, speed,damage, hp)
+
+        self.set_sprite(
+            "Assets\img\Brute basic.png",
+            frame_rect=(0, 0, 320, 320),
+            scale=0.1
+        ) 
     
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy, speed=3, damage=1):
         super().__init__()
-        self.image = pygame.Surface((6, 6))
-        self.image.fill((255, 255, 255))
-        self.rect = self.image.get_rect(center=(x, y))
+        
+        self.set_sprite(
+            "Assets\img\arrow basic.pngs",
+            frame_rect=(0, 0, 320, 320),
+            scale=0.1
+        )
 
         self.x = float(x)
         self.y = float(y)
@@ -398,8 +486,8 @@ class Projectile(pygame.sprite.Sprite):
         return self.damage
 
 class RangedEnemy(Enemy):
-    def __init__(self, x, y, speed, hp=3, size=20):
-        super().__init__(x, y, speed, hp, size)
+    def __init__(self, x, y, speed, hp=3):
+        super().__init__(x, y, speed, hp)
         self.image.fill((255, 100, 0))
         self.shooting_range = TILE * 5
         self.shooting_cooldown = 120
@@ -415,6 +503,7 @@ class RangedEnemy(Enemy):
     
     def give_damage(self):
         return 1
+    
 class Wall(pygame.sprite.Sprite):
     def __init__(self, rect):
         super().__init__()
@@ -456,6 +545,8 @@ class Door(pygame.sprite.Sprite):
         self.image = pygame.Surface((w, h))
         self.image.fill((100, 100, 100))
         self.rect = self.image.get_rect(topleft=(x, y))
+        self.x = x
+        self.y = y
 
         self.opened = True
         self.timer = -1
@@ -551,12 +642,12 @@ def pause_game(screen, clock, game):
         for event in pygame.event.get():
             if menu_state == 'Volume':
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT and game.volume > 0:
+                    if event.key == pygame.K_s and game.volume > 0:
                         game.nav_sound.play()
                         game.volume -= 1
                         game.update_sound_volume()
 
-                    elif event.key == pygame.K_RIGHT and game.volume < 10:
+                    elif event.key == pygame.K_z and game.volume < 10:
                         game.nav_sound.play()
                         game.volume += 1
                         game.update_sound_volume()
@@ -573,11 +664,11 @@ def pause_game(screen, clock, game):
                 if event.key == pygame.K_ESCAPE:
                     paused = False
 
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_z:
                     state_index = (state_index - 1) % len(options)
                     game.nav_sound.play()
 
-                elif event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_s:
                     state_index = (state_index + 1) % len(options)
                     game.nav_sound.play()
 
@@ -633,10 +724,43 @@ def main(game):
     SWORD_IMG = pygame.image.load("Assets\img\Sword.png").convert_alpha()
     SWORD_IMG = pygame.transform.scale_by(SWORD_IMG, 0.1)  # scale sword
 
+    # Load key sprite sheet (try several common paths). If not found, fallback to None.
+    key_sheet = None
+    key_sheet = pygame.image.load(str('Assets\img\key.png')).convert_alpha()
+    key_frames = []
+    KEY_ANIM_SPEED = 8  # frames per sprite frame
+    KEY_SCALE = 0.1     # render key much smaller
+    key_frame_index = 0
+    key_anim_counter = 0
+    if key_sheet:
+        kw, kh = key_sheet.get_size()
+        if kh >= kw and kw > 0:
+            n = kh // kw
+            for i in range(n):
+                frame = key_sheet.subsurface(pygame.Rect(0, i * kw, kw, kw)).copy()
+                frame = pygame.transform.scale_by(frame, KEY_SCALE)
+                key_frames.append(frame)
+
+    # Font for HUD (8-BIT WONDER)
+    HUD_FONT = pygame.font.Font(str(Path('Assets') / '8-BIT WONDER.TTF'), 20)
+   
+
     # Load map image (Path -> str)
     map_surface = pygame.image.load(str('Assets\img\map.png')).convert()
     # scale pixel art (x2)
     map_surface = pygame.transform.scale_by(map_surface, 2)
+
+    # Load spike sprite sheet (for door decoration). Try common filenames.
+    spike_sheet = None
+    spike_sheet = pygame.image.load(str('Assets\img\spikes activate.png')).convert_alpha()
+    spike_frames = []
+    if spike_sheet:
+        sw, sh = spike_sheet.get_size()
+        if sh >= sw and sw > 0:
+            # vertical strip -> take first square frame
+            frame = spike_sheet.subsurface(pygame.Rect(0, 0, sw, sw)).copy()
+            frame = pygame.transform.scale_by(frame, 0.1)
+            spike_frames.append(frame)
 
     # Build world from map without surfarray
     world_w, world_h, grid_w, grid_h, blocked_tiles, walls = build_world_from_map(
@@ -646,6 +770,11 @@ def main(game):
 
     # Camera uses real map size
     camera = Camera(SCREEN_W, SCREEN_H, world_w, world_h)
+
+    pygame.mixer.init()
+    pygame.mixer.music.load('sounds\muziek.ogg')
+    pygame.mixer.music.play(loops=-1)
+    pygame.mixer.music.set_volume(.3)
 
     # Player start: first free tile near top-left
     start_tx, start_ty = 70,70
@@ -664,6 +793,12 @@ def main(game):
     player = Player(start_x, start_y)
     player_group = pygame.sprite.GroupSingle(player)
 
+    # keys collected by clearing rooms (don't count boss room)
+    current_keys = 5
+    # victory flag (set True when finishline touched after boss cleared)
+    victory = False
+    boss_cleared = False
+
    # make rooms and doors
     enemies = pygame.sprite.Group()
     rooms = pygame.sprite.Group()
@@ -679,6 +814,7 @@ def main(game):
     door2room4 = Door(3839,2110,98,50)
     door1room5 = Door(3279,907,79,153)    
     bossdoor = Door(2302,866,196,53)
+    finishline = Door(2302,48,196,53)
     
     door1 = [door1room1,door2room1]
     door2 = [door1room2,door2room2]
@@ -686,8 +822,10 @@ def main(game):
     door4 = [door1room4,door2room4]
     door5 = [door1room5] 
 
-    door_boss = [bossdoor]
+    door_boss = [bossdoor,finishline]
+
     Doors.add(bossdoor)
+    Doors.add(finishline)
     Doors.add(door1room1)
     Doors.add(door2room1)
     Doors.add(door1room2)
@@ -697,6 +835,14 @@ def main(game):
     Doors.add(door1room4)
     Doors.add(door2room4)
     Doors.add(door1room5)
+    # Make non-boss door images invisible 
+    # for d in Doors:
+    #     if d is bossdoor:
+    #         continue
+    #     if d is finishline:
+    #         continue
+    #     d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
+    #     d.image.fill((0, 0, 0, 0))
     
     rooms.add(Room("room1_fix",477,671,880,880,door1))
     rooms.add(Room("room4_fix",3358,2157,675,720,door4))
@@ -717,12 +863,15 @@ def main(game):
     # Track player's tile for path recompute
     player_tile = (player.rect.centerx // TILE, player.rect.centery // TILE)
     current_room = None
+    
 
     run = True
     paused = False
     while run:
         clock.tick(FPS)
         for event in pygame.event.get():
+            # let the player track key state for smooth movement
+            player.process_event(event)
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -746,6 +895,8 @@ def main(game):
                 paused = False
                 continue
         # Update
+        # save previous player position to prevent entering boss room without enough keys
+        prev_player_x, prev_player_y = player.x, player.y
         player.update(walls, world_rect)
         camera.center_on(player.rect)
 
@@ -757,6 +908,8 @@ def main(game):
             e.tick_path_cooldown()
             if player_moved_tile or e.path_cooldown == 0:
                 e.request_path(player.rect, blocked_tiles, grid_w, grid_h)
+            # save previous position to allow reverting on collision 
+            old_x, old_y = e.x, e.y
             if e.path:
                 e.move_along_path()
             else:
@@ -767,7 +920,28 @@ def main(game):
                     e.x += (dx_e / dist) * e.speed
                     e.y += (dy_e / dist) * e.speed
                     e.rect.center = (int(e.x), int(e.y))
+
+            # call update (this may apply knockback)d
             e.update(walls, world_rect)
+
+            # collision with walls, player, or other enemies -> revert to previous position and cancel knockback
+            collided = False
+            if pygame.sprite.spritecollideany(e, walls):
+                collided = True
+            elif e.rect.colliderect(player.rect):
+                collided = True
+            else:
+                for other in enemies:
+                    if other is e:
+                        continue
+                    if e.rect.colliderect(other.rect):
+                        collided = True
+                        break
+            if collided:
+                e.x, e.y = old_x, old_y
+                e.rect.center = (int(e.x), int(e.y))
+                e.kb_vx = 0.0
+                e.kb_vy = 0.0
 
         arrow  = pygame.sprite.spritecollideany(player, Projectile_group) 
         if arrow:
@@ -783,6 +957,8 @@ def main(game):
             dir_x = world_mx - player.rect.centerx
             dir_y = world_my - player.rect.centery
             length_dir = math.hypot(dir_x, dir_y)
+            if pygame.mixer.get_busy() == False:
+               sfx_zwaard.play()
             if length_dir != 0:
                 dir_x /= length_dir
                 dir_y /= length_dir
@@ -797,6 +973,7 @@ def main(game):
                         kb_dx = e.rect.centerx - player.rect.centerx
                         kb_dy = e.rect.centery - player.rect.centery
                         kb_len = math.hypot(kb_dx, kb_dy)
+                        sfx_punch.play() 
                         if kb_len == 0:
                             kb_dx, kb_dy = 0.0, -1.0
                             kb_len = 1.0
@@ -818,10 +995,15 @@ def main(game):
         for room in rooms:
             # Check of de speler binnenstapt EN of de kamer nog niet geactiveerd was
             if not room.triggered and room.contains(player):
+                # Boss room requires 5 keys to enter
+                if room.id == 'boss' and current_keys < 5:
+                    # revert player position to previous frame (prevent entering)
+                    player.x, player.y = prev_player_x, prev_player_y
+                    player.rect.topleft = (int(player.x), int(player.y))
+                    continue
                 room.triggered = True  # Zorg dat dit direct op True gaat
                 current_room = room
-               
-        
+
                 # Start de timer voor alle deuren van deze kamer
                 for door in room.doors:
                     door.start_timer(1) # 1 seconde
@@ -837,9 +1019,18 @@ def main(game):
                 locations = spawn_locations(free_tiles,10,player)
                 for location in locations:
                     ex,ey = location
-                    enemies.add(Enemy(ex,ey,2,1))
+                    # enemies.add(Enemy(ex,ey,2,1))
+                    enemies.add(FastEnemy(ex,ey,2,1)) #debugging enemies
         
         if current_room and current_room.count == 1 and len(enemies) == 0:
+            # Only increment once when the room is first cleared
+            if not current_room.cleared:
+                if current_room.id != 'boss':
+                    current_keys += 1
+                current_room.cleared = True
+                # mark boss cleared separately
+                if current_room.id == 'boss':
+                    boss_cleared = True
             current_room.unlock(blocked_tiles,walls)
 
         # Draw
@@ -852,6 +1043,17 @@ def main(game):
         camera.blit_group(screen, player_group)
         camera.blit_group(screen,Doors)
         camera.blit_group(screen,Projectile_group)
+
+        # Draw spike decoration for non-boss doors (one spike frame per door tile)
+        # for d in Doors:
+        #     if d is bossdoor:
+        #         continue
+        #     if d is finishline:
+        #         continue
+        #     else:
+        #         px = d.x - camera.offset.x 
+        #         py = d.y - camera.offset.y + 50
+        #         screen.blit(spike_frames[0], (px, py))
 
         # for w in walls:
         #     screen.blit(w.image, (w.rect.x - camera.offset.x, w.rect.y))
@@ -894,6 +1096,34 @@ def main(game):
         #     pygame.draw.rect(screen, (200, 50, 50), (bar_x, bar_y, int(bar_w * (1 - frac)), bar_h))
         # else:
         #     pygame.draw.rect(screen, (50, 200, 50), (bar_x, bar_y, bar_w, bar_h))
+
+        # If boss cleared, allow finishing by touching finishline
+        if boss_cleared and not victory:
+            if player.rect.colliderect(finishline.rect):
+                victory = True
+                print(victory)
+
+        # Draw keys HUD (bottom-left) — only during gameplay (pause uses its own menu)
+        if key_frames:
+            key_anim_counter += 1
+            if key_anim_counter >= KEY_ANIM_SPEED:
+                key_anim_counter = 0
+                key_frame_index = (key_frame_index + 1) % len(key_frames)
+            key_img = key_frames[key_frame_index]
+            k_w, k_h = key_img.get_size()
+            hud_x = 8
+            hud_y = screen.get_height() - k_h - 8
+            screen.blit(key_img, (hud_x, hud_y))
+            # render number next to key
+            txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
+            screen.blit(txt, (hud_x + k_w + 6, hud_y + (k_h - txt.get_height()) // 2))
+        else:
+            # fallback: draw a simple yellow key rectangle and number
+            hud_x = 8
+            hud_y = screen.get_height() - 16 - 8
+            pygame.draw.rect(screen, (220, 200, 20), (hud_x, hud_y, 16, 8))
+            txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
+            screen.blit(txt, (hud_x + 22, hud_y - 2))
 
         pygame.display.flip()
 
