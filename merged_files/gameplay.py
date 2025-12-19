@@ -140,7 +140,7 @@ class SpriteSheet:
         return frame
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed=5, max_hp=10, cooldown=4):
+    def __init__(self, x, y, speed=4, max_hp=20, cooldown=3):
         super().__init__()
         # Load hero sprite (Path -> str)
         self.image = pygame.image.load(str('Assets\img\Hero_basic_24x24.png')).convert_alpha()
@@ -369,7 +369,7 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class FastEnemy(Enemy):
-    def __init__(self, x, y,speed,damage, hp=1):
+    def __init__(self, x, y,speed=1,damage=1, hp=1):
         super().__init__(x, y, speed,damage, hp)
 
         self.set_sprite(
@@ -385,7 +385,7 @@ class FastEnemy(Enemy):
         return self.damage
     
 class vampireLord(Enemy):
-    def __init__(self, x, y, speed, damage, hp=2):
+    def __init__(self, x, y, speed=1, damage=0, hp=10):
         super().__init__(x,y,speed, damage,hp)
         self.spawn_cooldown = 180
 
@@ -429,7 +429,7 @@ class vampireLord(Enemy):
         return events
 
 class Boss(Enemy):
-    def __init__(self, x, y, speed, damage, hp):
+    def __init__(self, x, y, speed=1, damage=4, hp=20):
         super().__init__(x, y, speed, damage, hp)
 
         self.set_sprite(
@@ -492,7 +492,7 @@ class Boss(Enemy):
 
 
 class Tank(Enemy):
-    def __init__(self, x, y, speed,damage, hp=5):
+    def __init__(self, x, y, speed=.5,damage=2, hp=5):
         super().__init__(x, y, speed,damage, hp)
 
         self.set_sprite(
@@ -502,7 +502,7 @@ class Tank(Enemy):
         ) 
 
 class charger(Enemy):
-    def __init__(self, x, y, speed, damage, hp=3):
+    def __init__(self, x, y, speed=1, damage=1, hp=2):
         # We zetten speed op 0 in de super, omdat we zijn beweging zelf regelen
         super().__init__(x, y, speed, damage, hp )
 
@@ -582,7 +582,7 @@ class Projectile(pygame.sprite.Sprite):
         return self.damage
 
 class RangedEnemy(Enemy):
-    def __init__(self, x, y, speed, hp=3):
+    def __init__(self, x, y, speed=1, hp=3):
         super().__init__(x, y, speed, hp)
         self.shooting_cooldown = 120
         
@@ -929,7 +929,7 @@ def main(game):
     player_group = pygame.sprite.GroupSingle(player)
 
     # keys collected by clearing rooms (don't count boss room)
-    current_keys = 5
+    current_keys = 0
     # victory flag (set True when finishline touched after boss cleared)
     victory = False
     boss_cleared = False
@@ -981,12 +981,12 @@ def main(game):
             d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
             d.image.fill((100, 100, 100))
     
-    rooms.add(Room("room1_fix",477,671,880,880,door1,[1]))
-    rooms.add(Room("room4_fix",3358,2157,675,720,door4,[1]))
-    rooms.add(Room("room5_fix",3359,333,865,818,door5,[4]))
-    rooms.add(Room("room2_fix",863,2829,960,723,door2,[5]))
-    rooms.add(Room("room3_fix",3551,3500,769,629,door3,[6]))
-    rooms.add(Room("boss",1631,45,1538,819,door_boss,[4,3,2,5,6,7]))
+    rooms.add(Room("room1_fix",477,671,880,880,door1,[2,2,2,6,6,6]))
+    rooms.add(Room("room4_fix",3358,2157,675,720,door4,[4,4,7]))
+    rooms.add(Room("room5_fix",3359,333,865,818,door5,[4,4,5,5]))
+    rooms.add(Room("room2_fix",863,2829,960,723,door2,[5,6,6,2]))
+    rooms.add(Room("room3_fix",3551,3500,769,629,door3,[6,4,4,2]))
+    rooms.add(Room("boss",1631,45,1538,819,door_boss,[3]))
     # Combat state
     attacking = False
     attack_timer = 0
