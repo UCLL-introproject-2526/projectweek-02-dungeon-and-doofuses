@@ -11,7 +11,6 @@ import math
 import heapq
 
 import sys
-from collections import deque
 
 from sound import sfx_zwaard, sfx_voetstappen, sfx_punch
 
@@ -141,9 +140,6 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, y))
         self.x = float(x)
         self.y = float(y)
-        # position history for jumping back multiple frames on collision
-        self.pos_history = deque(maxlen=3)
-        self.pos_history.append((self.x, self.y))
         self.speed = speed
         self.max_hp = max_hp
         self.hp = max_hp
