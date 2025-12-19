@@ -744,7 +744,10 @@ def main(game):
     player_group = pygame.sprite.GroupSingle(player)
 
     # keys collected by clearing rooms (don't count boss room)
-    current_keys = 0
+    current_keys = 5
+    # victory flag (set True when finishline touched after boss cleared)
+    victory = False
+    boss_cleared = False
 
    # make rooms and doors
     enemies = pygame.sprite.Group()
@@ -761,6 +764,7 @@ def main(game):
     door2room4 = Door(3839,2110,98,50)
     door1room5 = Door(3279,907,79,153)    
     bossdoor = Door(2302,866,196,53)
+    finishline = Door(2302,48,196,53)
     
     door1 = [door1room1,door2room1]
     door2 = [door1room2,door2room2]
@@ -768,8 +772,10 @@ def main(game):
     door4 = [door1room4,door2room4]
     door5 = [door1room5] 
 
-    door_boss = [bossdoor]
+    door_boss = [bossdoor,finishline]
+
     Doors.add(bossdoor)
+    Doors.add(finishline)
     Doors.add(door1room1)
     Doors.add(door2room1)
     Doors.add(door1room2)
@@ -782,6 +788,8 @@ def main(game):
     # Make non-boss door images invisible 
     # for d in Doors:
     #     if d is bossdoor:
+    #         continue
+    #     if d is finishline:
     #         continue
     #     d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
     #     d.image.fill((0, 0, 0, 0))
@@ -969,6 +977,9 @@ def main(game):
                 if current_room.id != 'boss':
                     current_keys += 1
                 current_room.cleared = True
+                # mark boss cleared separately
+                if current_room.id == 'boss':
+                    boss_cleared = True
             current_room.unlock(blocked_tiles,walls)
 
         # Draw
@@ -985,6 +996,8 @@ def main(game):
         # Draw spike decoration for non-boss doors (one spike frame per door tile)
         # for d in Doors:
         #     if d is bossdoor:
+        #         continue
+        #     if d is finishline:
         #         continue
         #     else:
         #         px = d.x - camera.offset.x 
@@ -1032,6 +1045,12 @@ def main(game):
         #     pygame.draw.rect(screen, (200, 50, 50), (bar_x, bar_y, int(bar_w * (1 - frac)), bar_h))
         # else:
         #     pygame.draw.rect(screen, (50, 200, 50), (bar_x, bar_y, bar_w, bar_h))
+
+        # If boss cleared, allow finishing by touching finishline
+        if boss_cleared and not victory:
+            if player.rect.colliderect(finishline.rect):
+                victory = True
+                print(victory)
 
         # Draw keys HUD (bottom-left) — only during gameplay (pause uses its own menu)
         if key_frames:
