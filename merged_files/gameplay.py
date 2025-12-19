@@ -505,8 +505,9 @@ class charger(Enemy):
     def __init__(self, x, y, speed, damage, hp=3):
         # We zetten speed op 0 in de super, omdat we zijn beweging zelf regelen
         super().__init__(x, y, speed, damage, hp )
+
         self.set_sprite(
-            "Assets\img\Vamp lord basic Big.png",
+            "Assets\img\slime basic.png",
             frame_rect=(0, 0, 320, 320),
             scale=0.1
         )
@@ -789,27 +790,28 @@ def pause_game(screen, clock, game):
                 pygame.quit()
                 sys.exit()
             
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    paused = False
+            elif menu_state == 'Main':
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        paused = False
 
-                elif event.key == pygame.K_z:
-                    state_index = (state_index - 1) % len(options)
-                    game.nav_sound.play()
+                    elif event.key == pygame.K_z:
+                        state_index = (state_index - 1) % len(options)
+                        game.nav_sound.play()
 
-                elif event.key == pygame.K_s:
-                    state_index = (state_index + 1) % len(options)
-                    game.nav_sound.play()
+                    elif event.key == pygame.K_s:
+                        state_index = (state_index + 1) % len(options)
+                        game.nav_sound.play()
 
-                elif event.key == pygame.K_RETURN:
-                    game.select_sound.play()
-                    choice = options[state_index]
-                    if choice == 'Resume':
-                        return 'Resume'
-                    elif choice == 'Volume':
-                        menu_state = 'Volume'
-                    elif choice == 'Quit':
-                        return 'Quit'
+                    elif event.key == pygame.K_RETURN:
+                        game.select_sound.play()
+                        choice = options[state_index]
+                        if choice == 'Resume':
+                            return 'Resume'
+                        elif choice == 'Volume':
+                            menu_state = 'Volume'
+                        elif choice == 'Quit':
+                            return 'Quit'
 
         overlay = pygame.Surface((1000, 600))
         overlay.set_alpha(150)
@@ -920,7 +922,7 @@ def main(game):
     pygame.mixer.init()
     pygame.mixer.music.load('sounds\muziek.ogg')
     pygame.mixer.music.play(loops=-1)
-    pygame.mixer.music.set_volume(.3)
+    pygame.mixer.music.set_volume(.2)
 
     # Player start: first free tile near top-left
     start_tx, start_ty = 70,70
