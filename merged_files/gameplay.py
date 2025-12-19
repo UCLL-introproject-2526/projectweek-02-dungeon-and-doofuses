@@ -648,12 +648,12 @@ def pause_game(screen, clock, game):
         for event in pygame.event.get():
             if menu_state == 'Volume':
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_s and game.volume > 0:
+                    if event.key == pygame.K_q and game.volume > 0:
                         game.nav_sound.play()
                         game.volume -= 1
                         game.update_sound_volume()
 
-                    elif event.key == pygame.K_z and game.volume < 10:
+                    elif event.key == pygame.K_d and game.volume < 10:
                         game.nav_sound.play()
                         game.volume += 1
                         game.update_sound_volume()
@@ -746,6 +746,23 @@ def main(game):
                 frame = key_sheet.subsurface(pygame.Rect(0, i * kw, kw, kw)).copy()
                 frame = pygame.transform.scale_by(frame, KEY_SCALE)
                 key_frames.append(frame)
+
+    # Load health (heart) sprite sheet for animated HP display. Try several common filenames.
+    health_sheet = None
+    health_frames = []
+    HEALTH_ANIM_SPEED = 8
+    HEALTH_SCALE = 0.1
+    health_frame_index = 0
+    health_anim_counter = 0
+    health_sheet = pygame.image.load(str('Assets\img\health icon ani.png')).convert_alpha()
+    if health_sheet:
+        hw, hh = health_sheet.get_size()
+        if hh >= hw and hw > 0:
+            m = hh // hw
+            for i in range(m):
+                frame = health_sheet.subsurface(pygame.Rect(0, i * hw, hw, hw)).copy()
+                frame = pygame.transform.scale_by(frame, HEALTH_SCALE)
+                health_frames.append(frame)
 
     # Font for HUD (8-BIT WONDER)
     HUD_FONT = pygame.font.Font(str(Path('Assets') / '8-BIT WONDER.TTF'), 20)
@@ -1123,6 +1140,33 @@ def main(game):
             # render number next to key
             txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
             screen.blit(txt, (hud_x + k_w + 6, hud_y + (k_h - txt.get_height()) // 2))
+            # Draw animated health icon + HP amount to the right of the keys
+            try:
+                if health_frames:
+                    health_anim_counter += 1
+                    if health_anim_counter >= HEALTH_ANIM_SPEED:
+                        health_anim_counter = 0
+                        health_frame_index = (health_frame_index + 1) % len(health_frames)
+                    heart_img = health_frames[health_frame_index]
+                    h_w, h_h = heart_img.get_size()
+                    # place heart after key + number
+                    number_w = txt.get_width()
+                    hx = hud_x + k_w + 6 + number_w + 12
+                    hy = hud_y + (k_h - h_h) // 2
+                    screen.blit(heart_img, (hx, hy))
+                    hp_txt = HUD_FONT.render(str(player.hp), True, (255, 255, 255))
+                    screen.blit(hp_txt, (hx + h_w + 6, hy + (h_h - hp_txt.get_height()) // 2))
+                else:
+                    # fallback: red square + HP number
+                    number_w = txt.get_width()
+                    hx = hud_x + k_w + 6 + number_w + 12
+                    hy = hud_y
+                    pygame.draw.rect(screen, (200, 40, 40), (hx, hy, 16, 16))
+                    hp_txt = HUD_FONT.render(str(player.hp), True, (255, 255, 255))
+                    screen.blit(hp_txt, (hx + 20, hy - 2))
+            except Exception:
+                # if anything goes wrong drawing health, silently continue
+                pass
         else:
             # fallback: draw a simple yellow key rectangle and number
             hud_x = 8

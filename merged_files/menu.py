@@ -171,12 +171,12 @@ class VolumeMenu(Menu):
             self.blit_screen()
         
     def check_input(self):
-        if self.game.DOWN_KEY and self.game.volume > 0:
+        if self.game.LEFT_KEY and self.game.volume > 0:
             self.game.nav_sound.play()
             self.game.volume -= 1
             self.game.update_sound_volume()
             pygame.mixer.music.set_volume(self.game.volume/10)
-        if self.game.UP_KEY and self.game.volume < 10:
+        if self.game.RIGHT_KEY and self.game.volume < 10:
             self.game.nav_sound.play()
             self.game.volume += 1
             self.game.update_sound_volume()
