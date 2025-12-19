@@ -83,7 +83,7 @@ def spawn_locations(free_tiles, amount, player):
             continue
         result.add((ex,ey))
         locations += 1
-    return result
+    return list(result)
 
 # ---------------------- A* PATHFINDING ---------------
 def astar(start, goal, blocked, grid_w, grid_h):
@@ -176,9 +176,6 @@ class Player(pygame.sprite.Sprite):
             dy += self.speed
 
         moving_now = (dx != 0 or dy != 0)
-        # Play footsteps only when movement starts
-        if moving_now and not self.moving and not pygame.mixer.get_busy():
-            sfx_voetstappen.play()
         self.moving = moving_now
         return dx, dy
 
@@ -250,8 +247,9 @@ class Player(pygame.sprite.Sprite):
         if self.hp <= 0: self.die()
 
     def die(self):
-        print("Speler is verslagen!")
-        self.kill() # Verwijdert de speler uit alle groepen
+        # print("Speler is verslagen!")
+        # self.kill() # Verwijdert de speler uit alle groepen
+        self.hp <= 0
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, damage, hp=2):
@@ -297,6 +295,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.center = (int(self.x), int(self.y))
         self.rect.clamp_ip(world_rect)
         self.x, self.y = float(self.rect.centerx), float(self.rect.centery)
+        return []
 
     def move_along_path(self):
         if self.path_index >= len(self.path):
@@ -401,7 +400,11 @@ class vampireLord(Enemy):
         events = []
         self.spawn_cooldown -=1
         if self.spawn_cooldown == 0:
-            events.append(("vampire", self.x,self.y, self.speed))
+            angle = random.uniform(0, 2 * math.pi)
+            offset = pygame.Vector2(math.cos(angle), math.sin(angle)) * 40
+            spawn_pos = pygame.Vector2(self.x, self.y) + offset
+            spawn_x, spawn_y = spawn_pos.x, spawn_pos.y
+            events.append(("vampire", spawn_x +2,spawn_y+2, self.speed))
             self.spawn_cooldown = 180
         return events
 
@@ -415,49 +418,57 @@ class Boss(Enemy):
             scale=0.1
         )
 
-        self.charge_allowed = False
-        self.aoe_cooldown = 180  # frames tussen AoE
-        self.charge_cooldown = 240  # frames tussen charges
-        self.aoe_radius = 80
-        self.aoe_timer = 0
-        self.charge_timer = 0
+        self.aoe_cooldown_max = 180
+        self.charge_cooldown_max = 240
+        
+        self.aoe_timer = self.aoe_cooldown_max
+        self.charge_timer = self.charge_cooldown_max
+        
+        self.aoe_radius = 100
         self.charging = False
-        self.charge_speed = 6.0
-        self.charge_dx = 0
-        self.charge_dy = 0
+        self.charge_speed = 8.0 # Lekker snel
+        self.charge_vec = pygame.Vector2(0, 0)
+        self.charge_duration = 0 # Hoe lang hij doorgaat met rennen
 
+    def update(self, walls, world_rect):
+        # STANDAARD: Roep de super van Enemy aan voor knockback en visuals
+        # Dit geeft de juiste return (events lijst)
+        events = super().update(walls,world_rect)
+        events = []
+        # Timers bijwerken
+        if self.aoe_timer > 0: self.aoe_timer -= 1
+        if self.charge_timer > 0: self.charge_timer -= 1
+
+        if self.charging:
+            self.x += self.charge_vec.x * self.charge_speed
+            self.y += self.charge_vec.y * self.charge_speed
+            self.rect.center = (int(self.x), int(self.y))
+            self.charge_duration -= 1
+            
+            if self.charge_duration <= 0 or pygame.sprite.spritecollideany(self, walls):
+                self.charging = False
+                self.charge_timer = self.charge_cooldown_max
+
+        return events # Altijd een lijst teruggeven voor de main loop!
 
     def area_of_effect(self, player):
-        if self.aoe_cooldown > 0:
-            return
+        self.aoe_timer = self.aoe_cooldown_max
+        print("aoe")
         dx = player.rect.centerx - self.x
         dy = player.rect.centery - self.y
         dist = math.hypot(dx, dy)
-        if dist <= self.aoe_radius:
-              # schade + knockback
-            kb_x = dx / dist if dist != 0 else 0
-            kb_y = dy / dist if dist != 0 else -1
-            player.take_damage(self.damage)
-            player.x += kb_x * 10
-            player.y += kb_y * 10
-            player.rect.center = (int(player.x), int(player.y))
-            print("Boss AoE hits player!")
-        self.aoe_timer = self.aoe_cooldown
+        if dist <= self.aoe_radius: player.take_damage(self.damage)
 
-    def charge(self, player):
-        target_x,target_y = player.rect.center
+    def start_charge(self, player):
+        target_x, target_y = player.rect.center
         dx = target_x - self.x
         dy = target_y - self.y
-        distance = math.hypot(dx,dy)
-        if distance == 0: return
-        dx = dx/distance
-        dy = dy/distance
-        self.charge_dx = (dx / distance) * self.charge_speed
-        self.charge_dy = (dy / distance) * self.charge_speed
-        self.charging = True
-        self.charge_timer = self.charge_cooldown
-        print("Boss starts charging!") 
-
+        dist = math.hypot(dx, dy)
+        
+        if dist > 0:
+            self.charge_vec = pygame.Vector2(dx/dist, dy/dist)
+            self.charging = True
+            self.charge_duration = 40 # Aantal frames dat hij rent
 
 
 class Tank(Enemy):
@@ -469,16 +480,60 @@ class Tank(Enemy):
             frame_rect=(0, 0, 640, 640),
             scale=0.1
         ) 
-    
+
+class charger(Enemy):
+    def __init__(self, x, y, speed, damage, hp=3):
+        # We zetten speed op 0 in de super, omdat we zijn beweging zelf regelen
+        super().__init__(x, y, speed, damage, hp )
+
+        self.set_sprite(
+            "Assets\img\slime basic.png",
+            frame_rect=(0, 0, 320, 320),
+            scale=0.1
+        )
+        self.base_speed = speed # De snelheid van de charge zelf
+        self.charge_speed_mult = 5.0 # Hoeveel keer sneller hij gaat tijdens een charge
+        
+        self.state = "IDLE"
+        self.timer = 60 # Wachttijd tussen charges (1 seconde)
+        self.direction = pygame.Vector2(0, 0)
+
+    def start_charge(self, player_rect):
+        # Bereken de richting naar de speler
+        dx = player_rect.centerx - self.x
+        dy = player_rect.centery - self.y
+        dist = math.hypot(dx, dy)
+        
+        if dist > 0:
+            self.direction = pygame.Vector2(dx/dist, dy/dist)
+            self.state = "CHARGING"
+
+    def update(self, walls, world_rect):
+        # Roep de basis update aan voor knockback en visuals
+        super().update(walls, world_rect)
+        
+        if self.state == "CHARGING":
+            # Beweeg in de gekozen richting
+            move_dist = self.base_speed * self.charge_speed_mult
+            self.x += self.direction.x * move_dist
+            self.y += self.direction.y * move_dist
+            self.rect.center = (int(self.x), int(self.y))
+            
+            # Stop als we een muur raken
+            if pygame.sprite.spritecollideany(self, walls):
+                self.state = "IDLE"
+                self.timer = 90 # Extra lange pauze na een botsing
+                
+        
+        elif self.state == "IDLE":
+            self.timer -= 1
+            # Optioneel: laat hem heel langzaam een beetje 'shaken' als waarschuwing
+            
+        return [] # Geen extra events nodig    
+
 class Projectile(pygame.sprite.Sprite):
     def __init__(self, x, y, dx, dy, speed=3, damage=1):
         super().__init__()
-        
-        self.set_sprite(
-            "Assets\img\\arrow basic.pngs",
-            frame_rect=(0, 0, 240, 240),
-            scale=0.1
-        )
 
         self.x = float(x)
         self.y = float(y)
@@ -487,6 +542,17 @@ class Projectile(pygame.sprite.Sprite):
         self.speed = speed
         self.damage = damage
         self.life = 180  # frames
+
+        offset = max(self.image.get_width(), self.image.get_height()) // 2 + 2
+        self.x += self.dx * offset
+        self.y += self.dy * offset 
+        self.rect.center = (int(self.x), int(self.y))
+
+        self.set_sprite(
+            "Assets\img\\arrow basic.pngs",
+            frame_rect=(0, 0, 240, 240),
+            scale=0.1
+        )
 
     def update(self, walls):
         self.x += self.dx * self.speed
@@ -534,7 +600,7 @@ class Wall(pygame.sprite.Sprite):
         self.image.fill((250, 0, 250, 80))
 
 class Room (pygame.sprite.Sprite):
-    def __init__(self,roomid, x, y, w, h, doors):
+    def __init__(self,roomid, x, y, w, h, doors, enemies):
         super().__init__()
         self.id = roomid
         self.rect = pygame.Rect(x, y ,w ,h)
@@ -544,11 +610,15 @@ class Room (pygame.sprite.Sprite):
         self.count = 0
         #self.doors is supposed to be a iterable
         self.doors = doors
+        self.monsters = enemies
         self.tiles = {
             (tx, ty)
             for tx in range(self.rect.left // TILE, self.rect.right // TILE)
             for ty in range(self.rect.top // TILE, self.rect.bottom // TILE)
         }
+    def give_enemies(self,i):
+        return self.monsters[i]
+    
     def contains(self,player):
         return pygame.sprite.collide_rect(self,player)
     
@@ -694,27 +764,28 @@ def pause_game(screen, clock, game):
                 pygame.quit()
                 sys.exit()
             
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    paused = False
+            elif menu_state == 'Main':
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        paused = False
 
-                elif event.key == pygame.K_z:
-                    state_index = (state_index - 1) % len(options)
-                    game.nav_sound.play()
+                    elif event.key == pygame.K_z:
+                        state_index = (state_index - 1) % len(options)
+                        game.nav_sound.play()
 
-                elif event.key == pygame.K_s:
-                    state_index = (state_index + 1) % len(options)
-                    game.nav_sound.play()
+                    elif event.key == pygame.K_s:
+                        state_index = (state_index + 1) % len(options)
+                        game.nav_sound.play()
 
-                elif event.key == pygame.K_RETURN:
-                    game.select_sound.play()
-                    choice = options[state_index]
-                    if choice == 'Resume':
-                        return 'Resume'
-                    elif choice == 'Volume':
-                        menu_state = 'Volume'
-                    elif choice == 'Quit':
-                        return 'Quit'
+                    elif event.key == pygame.K_RETURN:
+                        game.select_sound.play()
+                        choice = options[state_index]
+                        if choice == 'Resume':
+                            return 'Resume'
+                        elif choice == 'Volume':
+                            menu_state = 'Volume'
+                        elif choice == 'Quit':
+                            return 'Quit'
 
         overlay = pygame.Surface((1000, 600))
         overlay.set_alpha(150)
@@ -825,7 +896,7 @@ def main(game):
     pygame.mixer.init()
     pygame.mixer.music.load('sounds\muziek.ogg')
     pygame.mixer.music.play(loops=-1)
-    pygame.mixer.music.set_volume(.3)
+    pygame.mixer.music.set_volume(.2)
 
     # Player start: first free tile near top-left
     start_tx, start_ty = 70,70
@@ -897,13 +968,12 @@ def main(game):
             d.image = pygame.Surface((d.rect.width, d.rect.height), pygame.SRCALPHA)
             d.image.fill((100, 100, 100))
     
-    rooms.add(Room("room1_fix",477,671,880,880,door1))
-    rooms.add(Room("room4_fix",3358,2157,675,720,door4))
-    rooms.add(Room("room5_fix",3359,333,865,818,door5))
-    rooms.add(Room("room2_fix",863,2829,960,723,door2))
-    rooms.add(Room("room3_fix",3551,3500,769,629,door3))
-    rooms.add(Room("boss",1631,45,1538,819,door_boss))
-
+    rooms.add(Room("room1_fix",477,671,880,880,door1,[1]))
+    rooms.add(Room("room4_fix",3358,2157,675,720,door4,[1]))
+    rooms.add(Room("room5_fix",3359,333,865,818,door5,[4]))
+    rooms.add(Room("room2_fix",863,2829,960,723,door2,[5]))
+    rooms.add(Room("room3_fix",3551,3500,769,629,door3,[6]))
+    rooms.add(Room("boss",1631,45,1538,819,door_boss,[2,3,7,6,5]))
     # Combat state
     attacking = False
     attack_timer = 0
@@ -916,7 +986,7 @@ def main(game):
     # Track player's tile for path recompute
     player_tile = (player.rect.centerx // TILE, player.rect.centery // TILE)
     current_room = None
-    
+    VICTORY_ZONE = pygame.Rect(2302,0,196,1)
 
     run = True
     paused = False
@@ -959,42 +1029,102 @@ def main(game):
 
         for e in list(enemies):
             e.tick_path_cooldown()
-            if player_moved_tile or e.path_cooldown == 0:
-                e.request_path(player.rect, blocked_tiles, grid_w, grid_h)
-            # save previous position to allow reverting on collision 
-            old_x, old_y = e.x, e.y
-            if e.path:
-                e.move_along_path()
+            old_x, old_y = e.x, e.y  # Onthoud positie voor collision revert
+
+            # --- 1. BEWEGING & ACTIE LOGICA PER TYPE ---
+            
+            if isinstance(e, Boss):
+                if not e.charging:
+                    dist = math.hypot(player.rect.centerx - e.x, player.rect.centery - e.y)
+                    if dist < e.aoe_radius and e.aoe_timer <= 0: pass
+                        #e.area_of_effect(player)
+                    elif e.charge_timer <= 0:
+                        e.start_charge(player)
+                    else:
+                        # Normale Boss beweging (volgt pad)
+                        if player_moved_tile or e.path_cooldown == 0:
+                            e.request_path(player.rect, blocked_tiles, grid_w, grid_h)
+                        e.move_along_path()
+                # Als hij wel aan het chargen is, beweegt hij in zijn e.update() later
+
+            elif isinstance(e, charger):
+                if e.state == "IDLE" and e.timer <= 0:
+                    e.start_charge(player.rect) 
+                # Charger beweegt via zijn eigen update() later
+
             else:
-                dx_e = player.rect.centerx - e.x
-                dy_e = player.rect.centery - e.y
-                dist = math.hypot(dx_e, dy_e)
-                if dist != 0:
-                    e.x += (dx_e / dist) * e.speed
-                    e.y += (dy_e / dist) * e.speed
-                    e.rect.center = (int(e.x), int(e.y))
+                # NORMALE ENEMIES & VAMPIRELORD
+                if player_moved_tile or e.path_cooldown == 0:
+                    e.request_path(player.rect, blocked_tiles, grid_w, grid_h)
 
-            # call update (this may apply knockback)d
-            e.update(walls, world_rect)
+                if e.path:
+                    e.move_along_path()
+                elif isinstance(e, vampireLord):
+                    # Vampire kiting logica (loop weg als geen pad)
+                    dx_e = player.rect.centerx - e.x
+                    dy_e = player.rect.centery - e.y
+                    dist = math.hypot(dx_e, dy_e)
+                    if dist != 0:
+                        e.x -= (dx_e / dist) * e.speed
+                        e.y -= (dy_e / dist) * e.speed
+                else:
+                    # Fallback chase voor standaard enemies
+                    dx_e = player.rect.centerx - e.x
+                    dy_e = player.rect.centery - e.y
+                    dist = math.hypot(dx_e, dy_e)
+                    if dist != 0:
+                        e.x += (dx_e / dist) * e.speed
+                        e.y += (dy_e / dist) * e.speed
+                
+                e.rect.center = (int(e.x), int(e.y))
 
-            # collision with walls, player, or other enemies -> revert to previous position and cancel knockback
+            # --- 2. UPDATE & EVENTS (Gezamenlijk) ---
+            
+            # Voer update uit (past knockback toe en voert interne timers uit)
+            # Merk op: Charger en Boss bewegen hier hun 'charging' posities
+            events = e.update(walls,world_rect) 
+            
+            # Event handling (Spawns en Projectielen)
+            for ev in events:
+                if ev[0] == "vampire":
+                    enemies.add(FastEnemy(ev[1], ev[2], ev[3], 1))
+                elif ev[0] == "shoot":
+                    dx = player.x - ev[1]
+                    dy = player.y - ev[2]
+                    afstand = math.hypot(dx, dy)
+                    if afstand != 0:
+                        Projectile_group.add(Projectile(ev[1], ev[2], dx/afstand, dy/afstand))
+
+            # --- 3. COLLISION DETECTION & REVERT ---
+            
             collided = False
+            # Check muur
             if pygame.sprite.spritecollideany(e, walls):
                 collided = True
+            # Check speler
             elif e.rect.colliderect(player.rect):
                 collided = True
+            # Check andere vijanden
             else:
                 for other in enemies:
-                    if other is e:
-                        continue
+                    if other is e: continue
                     if e.rect.colliderect(other.rect):
                         collided = True
                         break
+
             if collided:
+                # Zet terug naar de veilige positie voor de beweging
                 e.x, e.y = old_x, old_y
                 e.rect.center = (int(e.x), int(e.y))
-                e.kb_vx = 0.0
-                e.kb_vy = 0.0
+                # Stop knockback bij botsing
+                e.kb_vx, e.kb_vy = 0.0, 0.0
+                # Als een Charger of Boss een muur raakt, stopt de charge vaak ook
+                if hasattr(e, 'charging'): e.charging = False
+                if hasattr(e, 'state') and e.state == "CHARGING": e.state = "IDLE"
+
+            # --- 4. FINAL SYNC ---
+            e.rect.clamp_ip(world_rect)
+            e.x, e.y = float(e.rect.centerx), float(e.rect.centery)
 
         arrow  = pygame.sprite.spritecollideany(player, Projectile_group) 
         if arrow:
@@ -1070,11 +1200,17 @@ def main(game):
             if not current_room.doors[0].opened and current_room.count == 0:
                 current_room.count = 1
                 free_tiles = current_room.tiles - blocked_tiles
-                locations = spawn_locations(free_tiles,10,player)
-                for location in locations:
-                    ex,ey = location
-                    # enemies.add(Enemy(ex,ey,2,1))
-                    enemies.add(RangedEnemy(ex,ey,2,1)) #debugging enemies
+                locations = spawn_locations(free_tiles,len(current_room.monsters),player)
+                for i in range(len(locations)):
+                    ex,ey = locations[i]
+                    spawntype = current_room.give_enemies(i)
+                    if spawntype == 1: enemies.add(Enemy(ex,ey,2,1))
+                    if spawntype == 2: enemies.add(FastEnemy(ex,ey,2,1)) 
+                    if spawntype == 3: enemies.add(Boss(ex,ey,1,1,1))
+                    if spawntype == 4: enemies.add(RangedEnemy(ex,ey,1,1))
+                    if spawntype == 5: enemies.add(vampireLord(ex,ey,1,1,2))
+                    if spawntype == 6: enemies.add(charger(ex,ey,1,1))
+                    if spawntype == 7: enemies.add(Tank(ex,ey,2,1)) 
         
         if current_room and current_room.count == 1 and len(enemies) == 0:
             # Only increment once when the room is first cleared
@@ -1207,6 +1343,12 @@ def main(game):
             pygame.draw.rect(screen, (220, 200, 20), (hud_x, hud_y, 16, 8))
             txt = HUD_FONT.render(str(current_keys), True, (255, 255, 255))
             screen.blit(txt, (hud_x + 22, hud_y - 2))
+
+        if player.hp <= 0:
+            return "GAME_OVER"
+                
+        if player.rect.colliderect(VICTORY_ZONE):
+            return 'VICTORY'
 
         pygame.display.flip()
 
