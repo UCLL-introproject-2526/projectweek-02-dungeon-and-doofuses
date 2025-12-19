@@ -147,27 +147,52 @@ class Player(pygame.sprite.Sprite):
         self.COOLDOWN = cooldown
         self.invincibility_duration = 1000
         self.vincible = False
+        # movement key state for KEYDOWN/KEYUP handling
+        self.move_left = False
+        self.move_right = False
+        self.move_up = False
+        self.move_down = False
+        self.moving = False  # last-frame moving state (for footstep sound)
 
     def handle_input(self):
-        keys = pygame.key.get_pressed()
+        # Compute movement from stored key state (set by process_event)
         dx, dy = 0, 0
-        if keys[pygame.K_q]: 
+        if self.move_left:
             dx -= self.speed
-            if pygame.mixer.get_busy() == False:
-               sfx_voetstappen.play()
-        if keys[pygame.K_d]: 
+        if self.move_right:
             dx += self.speed
-            if pygame.mixer.get_busy() == False:
-               sfx_voetstappen.play()
-        if keys[pygame.K_z]: 
+        if self.move_up:
             dy -= self.speed
-            if pygame.mixer.get_busy() == False:
-               sfx_voetstappen.play()
-        if keys[pygame.K_s]: 
+        if self.move_down:
             dy += self.speed
-            if pygame.mixer.get_busy() == False:
-               sfx_voetstappen.play()
+
+        moving_now = (dx != 0 or dy != 0)
+        # Play footsteps only when movement starts
+        if moving_now and not self.moving and not pygame.mixer.get_busy():
+            sfx_voetstappen.play()
+        self.moving = moving_now
         return dx, dy
+
+    def process_event(self, event):
+        """Call from the main event loop to track KEYDOWN/KEYUP state for smooth movement."""
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                self.move_left = True
+            elif event.key == pygame.K_d:
+                self.move_right = True
+            elif event.key == pygame.K_z:
+                self.move_up = True
+            elif event.key == pygame.K_s:
+                self.move_down = True
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_q:
+                self.move_left = False
+            elif event.key == pygame.K_d:
+                self.move_right = False
+            elif event.key == pygame.K_z:
+                self.move_up = False
+            elif event.key == pygame.K_s:
+                self.move_down = False
 
     def move(self, dx, dy, walls):
         self.x += dx
@@ -565,12 +590,12 @@ def pause_game(screen, clock, game):
         for event in pygame.event.get():
             if menu_state == 'Volume':
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT and game.volume > 0:
+                    if event.key == pygame.K_s and game.volume > 0:
                         game.nav_sound.play()
                         game.volume -= 1
                         game.update_sound_volume()
 
-                    elif event.key == pygame.K_RIGHT and game.volume < 10:
+                    elif event.key == pygame.K_z and game.volume < 10:
                         game.nav_sound.play()
                         game.volume += 1
                         game.update_sound_volume()
@@ -587,11 +612,11 @@ def pause_game(screen, clock, game):
                 if event.key == pygame.K_ESCAPE:
                     paused = False
 
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_z:
                     state_index = (state_index - 1) % len(options)
                     game.nav_sound.play()
 
-                elif event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_s:
                     state_index = (state_index + 1) % len(options)
                     game.nav_sound.play()
 
@@ -742,6 +767,8 @@ def main(game):
     while run:
         clock.tick(FPS)
         for event in pygame.event.get():
+            # let the player track key state for smooth movement
+            player.process_event(event)
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
