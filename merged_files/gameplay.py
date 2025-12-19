@@ -398,13 +398,33 @@ class vampireLord(Enemy):
     def update(self,walls,world_rect):
         super().update(walls,world_rect)
         events = []
-        self.spawn_cooldown -=1
+        self.spawn_cooldown -= 1
         if self.spawn_cooldown == 0:
-            angle = random.uniform(0, 2 * math.pi)
-            offset = pygame.Vector2(math.cos(angle), math.sin(angle)) * 40
-            spawn_pos = pygame.Vector2(self.x, self.y) + offset
-            spawn_x, spawn_y = spawn_pos.x, spawn_pos.y
-            events.append(("vampire", spawn_x +2,spawn_y+2, self.speed))
+            found = False
+            # Try several offsets/angles to find a free spawn spot (not colliding with walls)
+            for attempt in range(12):
+                angle = random.uniform(0, 2 * math.pi)
+                dist = 60 + attempt * 12  # progressively try farther away
+                offset = pygame.Vector2(math.cos(angle), math.sin(angle)) * dist
+                spawn_pos = pygame.Vector2(self.x, self.y) + offset
+                spawn_x, spawn_y = spawn_pos.x, spawn_pos.y
+                # quick bounds check
+                if not world_rect.collidepoint(int(spawn_x), int(spawn_y)):
+                    continue
+                spawn_rect = pygame.Rect(int(spawn_x) - 10, int(spawn_y) - 10, 20, 20)
+                collision = False
+                for w in walls:
+                    if spawn_rect.colliderect(w.rect):
+                        collision = True
+                        break
+                if collision:
+                    continue
+                # acceptable spawn found
+                found = True
+                break
+            if found:
+                events.append(("vampire", spawn_x, spawn_y, self.speed))
+            # reset cooldown regardless to avoid tight loops
             self.spawn_cooldown = 180
         return events
 
@@ -542,16 +562,22 @@ class Projectile(pygame.sprite.Sprite):
         self.damage = damage
         self.life = 180  # frames
 
-        offset = max(self.image.get_width(), self.image.get_height()) // 2 + 2
-        self.x += self.dx * offset
-        self.y += self.dy * offset 
-        self.rect.center = (int(self.x), int(self.y))
-
+        # Create sprite first so we can measure projectile size
         self.set_sprite(
             "Assets\img\\arrow basic.pngs",
             frame_rect=(0, 0, 240, 240),
             scale=0.1
         )
+
+        # Place the projectile just outside the shooter to avoid immediate collision.
+        # Formula: half_projectile + small_margin. If you know the shooter's radius,
+        # use (half_shooter + half_projectile + margin) instead.
+        proj_radius = max(self.image.get_width(), self.image.get_height()) // 2
+        margin = 6
+        offset = proj_radius + margin
+        self.x += self.dx * offset
+        self.y += self.dy * offset
+        self.rect.center = (int(self.x), int(self.y))
 
     def update(self, walls):
         self.x += self.dx * self.speed
@@ -971,7 +997,7 @@ def main(game):
     rooms.add(Room("room5_fix",3359,333,865,818,door5,[4]))
     rooms.add(Room("room2_fix",863,2829,960,723,door2,[5]))
     rooms.add(Room("room3_fix",3551,3500,769,629,door3,[6]))
-    rooms.add(Room("boss",1631,45,1538,819,door_boss,[2,3,7,6,5]))
+    rooms.add(Room("boss",1631,45,1538,819,door_boss,[4,4]))
     # Combat state
     attacking = False
     attack_timer = 0
@@ -1202,7 +1228,6 @@ def main(game):
                 for i in range(len(locations)):
                     ex,ey = locations[i]
                     spawntype = current_room.give_enemies(i)
-                    if spawntype == 1: enemies.add(Enemy(ex,ey,2,1))
                     if spawntype == 2: enemies.add(FastEnemy(ex,ey,2,1)) 
                     if spawntype == 3: enemies.add(Boss(ex,ey,1,1,1))
                     if spawntype == 4: enemies.add(RangedEnemy(ex,ey,1,1))
